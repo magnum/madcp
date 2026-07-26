@@ -181,3 +181,9 @@ bundle exec ruby server.rb
 ```bash
 bundle exec ruby -Itest test/app_test.rb
 ```
+
+## License
+
+MadCP is released under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Antonio Molinari.

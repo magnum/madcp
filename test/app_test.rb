@@ -40,6 +40,8 @@ class AppTest < Minitest::Test
     assert_includes html, 'id="theme-toggle"'
     assert_includes html, 'href="/logout"'
     assert_includes html, ">MadCP</a>"
+    assert_includes html, "MIT License"
+    assert_includes html, "/blob/main/LICENSE"
     assert_includes html, "text-5xl"
     assert_includes html, "Integrations"
     assert_includes html, "text-3xl"
