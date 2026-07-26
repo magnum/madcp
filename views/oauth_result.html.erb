@@ -17,10 +17,85 @@
   <% token_body = body.is_a?(Hash) ? body : {} %>
   <% access_token = token_body["access_token"] || token_body[:access_token] %>
   <% refresh_token = token_body["refresh_token"] || token_body[:refresh_token] %>
+  <% token_json_text = body.is_a?(Hash) ? JSON.pretty_generate(body) : "" %>
+
+  <% if token_saved %>
+    <div class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-5 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100"
+         role="status">
+      <p class="font-semibold">Token saved into MADCP.</p>
+      <p class="mt-2 leading-7">
+        Access token and the full OAuth JSON (including refresh token when present) are stored.
+        You can return to the authentication page — the token field is already filled.
+      </p>
+      <a class="mt-4 inline-block font-bold underline decoration-emerald-700 underline-offset-4"
+         href="/servers/<%= h integration.id %>/auth">Go to authentication form</a>
+    </div>
+  <% elsif token_save_error %>
+    <div class="mt-8 rounded-lg border border-amber-700 bg-amber-50 p-5 text-amber-950 dark:bg-amber-950 dark:text-amber-100"
+         role="alert">
+      <p class="font-semibold">Automatic save failed</p>
+      <p class="mt-2 leading-7"><%= h token_save_error %></p>
+      <p class="mt-2 leading-7">Paste the access token below to save it into the MADCP auth form.</p>
+    </div>
+  <% end %>
+
+  <% show_save_form = !token_saved && (access_token || refresh_token || token_save_error || oauth_result) %>
+  <% if show_save_form %>
+    <section class="mt-8 rounded-lg border border-stone-400 bg-stone-50 p-6 dark:border-zinc-600 dark:bg-zinc-900">
+      <h2 class="text-2xl font-bold">Save token into MADCP</h2>
+      <p class="mt-3 leading-7 text-stone-700 dark:text-zinc-300">
+        Read the token from the above output and set it in the token field below.
+        Saving writes it into the MADCP authentication form for this integration
+        (and stores the full OAuth JSON when available).
+      </p>
+
+      <form class="mt-6 space-y-5"
+            method="post"
+            action="/servers/<%= h integration.id %>/auth/save_oauth_token">
+        <div>
+          <label class="mb-2 block font-semibold" for="username">MADCP username</label>
+          <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+                 id="username" name="username" autocomplete="username" required>
+        </div>
+        <div>
+          <label class="mb-2 block font-semibold" for="password">MADCP password</label>
+          <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+                 id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <div>
+          <label class="mb-2 block font-semibold" for="access_token">Access token</label>
+          <textarea class="h-28 w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 font-mono text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+                    id="access_token"
+                    name="access_token"
+                    spellcheck="false"
+                    required><%= h access_token.to_s %></textarea>
+        </div>
+        <% if !token_json_text.empty? %>
+          <input type="hidden" name="token_json" value="<%= h token_json_text %>">
+        <% else %>
+          <div>
+            <label class="mb-2 block font-semibold" for="token_json">Full OAuth JSON (optional)</label>
+            <p class="mb-2 leading-7 text-stone-600 dark:text-zinc-400">
+              Paste the upstream token response body to keep the refresh token too.
+            </p>
+            <textarea class="h-40 w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 font-mono text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+                      id="token_json"
+                      name="token_json"
+                      spellcheck="false"></textarea>
+          </div>
+        <% end %>
+        <button class="w-full rounded-lg bg-stone-950 px-5 py-3 font-bold text-stone-50 hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+                type="submit">
+          Save token and return to authentication
+        </button>
+      </form>
+    </section>
+  <% end %>
+
   <% if access_token || refresh_token %>
     <section class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-6 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100">
       <h2 class="text-2xl font-bold">Copy tokens now</h2>
-      <p class="mt-2 leading-7">This page is not stored. Copy the credentials before leaving.</p>
+      <p class="mt-2 leading-7">Keep a backup copy if you want — MADCP also stores them when save succeeds.</p>
       <% { "Access token" => access_token, "Refresh token" => refresh_token }.each do |label, token| %>
         <% next unless token %>
         <div class="mt-5" data-command>

@@ -118,6 +118,33 @@ class FattureInCloudTest < Minitest::Test
     ENV["FATTUREINCLOUD_ALLOW_WRITE"] = old_write_override
   end
 
+  def test_apply_oauth_result_persists_access_refresh_and_full_json
+    path = File.join(@integration.data_dir, "oauth_token.json")
+    payload = {
+      status: 200,
+      body: {
+        "access_token" => "access-from-oauth",
+        "refresh_token" => "refresh-from-oauth",
+        "token_type" => "bearer",
+        "expires_in" => 3600,
+      },
+    }
+    @integration.define_singleton_method(:auth_status) { { authenticated: true } }
+
+    assert @integration.apply_oauth_result!(payload)
+    assert_equal "access-from-oauth", ENV["FATTUREINCLOUD_TOKEN"]
+    assert_equal "refresh-from-oauth", ENV["FATTUREINCLOUD_REFRESH_TOKEN"]
+    assert File.file?(path)
+    stored = JSON.parse(File.read(path))
+    assert_equal "access-from-oauth", stored.fetch("access_token")
+    assert_equal "refresh-from-oauth", stored.fetch("refresh_token")
+  ensure
+    ENV.delete("FATTUREINCLOUD_TOKEN")
+    ENV.delete("FATTUREINCLOUD_REFRESH_TOKEN")
+    File.delete(path) if path && File.file?(path)
+    @integration.singleton_class.remove_method(:auth_status) if @integration
+  end
+
   def test_oauth_uses_exact_callback_and_json_code_exchange
     old_client_id = ENV["FATTUREINCLOUD_CLIENT_ID"]
     old_client_secret = ENV["FATTUREINCLOUD_CLIENT_SECRET"]

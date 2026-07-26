@@ -63,6 +63,17 @@
     </section>
   <% end %>
 
+  <% if state %>
+    <div class="mt-8 rounded-lg border border-amber-700 bg-amber-50 p-5 text-amber-950 dark:bg-amber-950 dark:text-amber-100"
+         role="status">
+      <p class="font-semibold">Claude (or another MCP client) is waiting for authorization.</p>
+      <p class="mt-2 leading-7">
+        If updating this integration's credentials fails, you can still return to Claude with the button
+        <span class="font-semibold">Continue to Claude anyway</span> below — otherwise the client stays blocked on the auth request.
+      </p>
+    </div>
+  <% end %>
+
   <form class="mt-10 space-y-6"
         method="post"
         action="/servers/<%= h integration.id %>/auth/<%= state ? "callback" : "credentials" %>">
@@ -120,8 +131,20 @@
 
     <button class="w-full rounded-lg bg-stone-950 px-5 py-3 font-bold text-stone-50 hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
             type="submit">
-      <%= state ? "Authorize MCP client" : "Update integration credentials" %>
+      <%= state ? "Save credentials and authorize MCP client" : "Update integration credentials" %>
     </button>
+
+    <% if state %>
+      <button class="w-full rounded-lg border-2 border-amber-700 bg-amber-50 px-5 py-3 font-bold text-amber-950 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900 dark:focus:ring-amber-400 dark:focus:ring-offset-zinc-950"
+              type="submit"
+              formaction="/servers/<%= h integration.id %>/auth/continue"
+              formmethod="post">
+        Continue to Claude anyway
+      </button>
+      <p class="text-center leading-7 text-stone-600 dark:text-zinc-400">
+        Skips updating integration credentials and only completes the MCP OAuth handshake.
+      </p>
+    <% end %>
 
     <% if integration.oauth_token_retrieval? %>
       <div class="border-t border-stone-300 pt-8 dark:border-zinc-700">

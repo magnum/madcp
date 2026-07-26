@@ -313,11 +313,21 @@ module Madcp
       halt 400, json({ error: "invalid, expired, or already used OAuth state" }, 400) unless consume_oauth_retrieval_state(state)
 
       result = nil
+      token_saved = false
+      token_save_error = nil
       if callback_params["code"].is_a?(String) && !callback_params["code"].empty?
         result = integration.oauth_exchange(
           callback_url: oauth_callback_url,
           params: callback_params,
         )
+        if integration.respond_to?(:apply_oauth_result!)
+          begin
+            integration.apply_oauth_result!(result)
+            token_saved = true
+          rescue StandardError => e
+            token_save_error = e.message
+          end
+        end
       end
       content_type :html
       renderer.page(
@@ -327,6 +337,8 @@ module Madcp
           callback_url: oauth_callback_url,
           oauth_params: redact_oauth_secrets(callback_params),
           oauth_result: redact_oauth_secrets(result),
+          token_saved: token_saved,
+          token_save_error: token_save_error,
         ),
       )
     rescue StandardError => e
@@ -339,6 +351,40 @@ module Madcp
           callback_url: oauth_callback_url,
           oauth_params: redact_oauth_secrets(oauth_query_params),
           oauth_result: { error: e.message },
+          token_saved: false,
+          token_save_error: nil,
+        ),
+      )
+    end
+
+    post "/servers/:server_id/auth/save_oauth_token" do
+      require_oauth_token_retrieval!
+      provider.verify_operator!(params["username"], params["password"])
+      if integration.respond_to?(:apply_oauth_token_paste!)
+        integration.apply_oauth_token_paste!(
+          access_token: params["access_token"],
+          token_json: params["token_json"],
+        )
+      else
+        integration.apply_credentials(
+          "#{integration.id}_token" => params["access_token"].to_s,
+        )
+      end
+      redirect "/servers/#{integration.id}/auth", 302
+    rescue OAuthProvider::OAuthError => e
+      oauth_error(e)
+    rescue StandardError => e
+      status 400
+      content_type :html
+      renderer.page(
+        "oauth_result",
+        **integration_locals(
+          integration,
+          callback_url: oauth_callback_url,
+          oauth_params: {},
+          oauth_result: { error: e.message },
+          token_saved: false,
+          token_save_error: e.message,
         ),
       )
     end
@@ -365,8 +411,28 @@ module Madcp
       content_type :html
       renderer.page(
         "auth",
-        **integration_locals(integration, state: state, error: e.message, message: nil),
+        **integration_locals(
+          integration,
+          state: state,
+          error: "#{e.message} — you can still use “Continue to Claude anyway” below.",
+          message: nil,
+        ),
       )
+    end
+
+    # Complete MCP client OAuth without requiring integration credentials to succeed.
+    post "/servers/:server_id/auth/continue" do
+      state = params["state"].to_s
+      halt 400, json({ error: "missing OAuth state" }, 400) if state.empty?
+
+      provider.verify_operator!(params["username"], params["password"])
+      redirect provider.authorize_login(
+        username: params["username"],
+        password: params["password"],
+        state: state,
+      ), 302
+    rescue OAuthProvider::OAuthError => e
+      oauth_error(e)
     end
 
     post "/servers/:server_id/auth/register" do

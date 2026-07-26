@@ -90,6 +90,49 @@ class AppTest < Minitest::Test
     integration.singleton_class.remove_method(:auth_status) if integration
   end
 
+  def test_sanitize_env_value_strips_optional_placeholders
+    assert_equal "proj-1", Madcp.sanitize_env_value("  proj-1  ")
+    assert_equal "", Madcp.sanitize_env_value("# optional")
+    assert_equal "", Madcp.sanitize_env_value("#optional")
+    assert_equal "proj-1", Madcp.sanitize_env_value("proj-1 # optional")
+  end
+
+  def test_auth_continue_completes_mcp_oauth_without_integration_credentials
+    provider = APP.allocate.providers.fetch("hey")
+    client = provider.register_client(
+      "redirect_uris" => ["https://claude.ai/api/mcp/auth_callback"],
+      "token_endpoint_auth_method" => "none",
+    )
+    verifier = "c" * 64
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    login_url = provider.start_authorization(
+      "client_id" => client["client_id"],
+      "redirect_uri" => "https://claude.ai/api/mcp/auth_callback",
+      "response_type" => "code",
+      "code_challenge" => challenge,
+      "code_challenge_method" => "S256",
+      "state" => "claude-wait",
+    )
+    login_state = URI.decode_www_form(URI(login_url).query).to_h.fetch("state")
+
+    response = @request.post(
+      "/servers/hey/auth/continue",
+      "HTTP_HOST" => "localhost",
+      "CONTENT_TYPE" => "application/x-www-form-urlencoded",
+      input: URI.encode_www_form(
+        username: "admin",
+        password: "secret",
+        state: login_state,
+      ),
+    )
+
+    assert_equal 302, response.status
+    location = response["Location"]
+    assert_includes location, "https://claude.ai/api/mcp/auth_callback"
+    assert_includes location, "code="
+    assert_includes location, "state=claude-wait"
+  end
+
   def test_auth_form_prefills_env_backed_fields
     integration = REGISTRY.fetch("googleworkspace")
     integration.define_singleton_method(:auth_status) { { authenticated: false } }

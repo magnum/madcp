@@ -152,15 +152,15 @@ module Madcp
     # Current value for an auth form field. Prefer an explicit :value (string or
     # callable), otherwise the ENV key named by :env.
     def auth_field_value(field)
-      if field.key?(:value)
-        value = field[:value]
-        value = instance_exec(&value) if value.respond_to?(:call)
-        value.to_s
-      elsif field[:env]
-        ENV[field[:env]].to_s
-      else
-        ""
-      end
+      raw =
+        if field.key?(:value)
+          value = field[:value]
+          value = instance_exec(&value) if value.respond_to?(:call)
+          value
+        elsif field[:env]
+          ENV[field[:env]]
+        end
+      Madcp.sanitize_env_value(raw)
     end
 
     protected
@@ -200,28 +200,41 @@ module Madcp
     end
 
     def load_credentials!
-      return unless File.file?(credential_path)
+      if File.file?(credential_path)
+        File.readlines(credential_path, chomp: true).each do |line|
+          next if line.empty? || line.start_with?("#")
 
-      File.readlines(credential_path, chomp: true).each do |line|
-        next if line.empty? || line.start_with?("#")
+          key, value = line.split("=", 2)
+          next unless key && value && credential_env_keys.include?(key)
 
-        key, value = line.split("=", 2)
-        ENV[key] = value if key && value && credential_env_keys.include?(key)
+          cleaned = Madcp.sanitize_env_value(value)
+          if cleaned.empty?
+            ENV.delete(key)
+          else
+            ENV[key] = cleaned
+          end
+        end
       end
+
+      sanitize_credential_env!
     end
 
     def persist_credentials!(values)
-      current = credential_env_keys.to_h { |key| [key, ENV[key]] }.compact
+      current = credential_env_keys.to_h do |key|
+        [key, Madcp.sanitize_env_value(ENV[key])]
+      end.reject { |_, value| value.empty? }
+
       values.each do |key, value|
         key = key.to_s
         next unless credential_env_keys.include?(key)
 
-        if value.to_s.empty?
+        cleaned = Madcp.sanitize_env_value(value)
+        if cleaned.empty?
           current.delete(key)
           ENV.delete(key)
         else
-          current[key] = value.to_s
-          ENV[key] = value.to_s
+          current[key] = cleaned
+          ENV[key] = cleaned
         end
       end
 
@@ -233,6 +246,19 @@ module Madcp
           current.map { |key, value| "#{key}=#{value}" }.join("\n") + "\n",
           perm: 0o600,
         )
+      end
+    end
+
+    def sanitize_credential_env!
+      credential_env_keys.each do |key|
+        next unless ENV.key?(key)
+
+        cleaned = Madcp.sanitize_env_value(ENV[key])
+        if cleaned.empty?
+          ENV.delete(key)
+        else
+          ENV[key] = cleaned
+        end
       end
     end
 
