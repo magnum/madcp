@@ -16,6 +16,7 @@ module Madcp
 
         def initialize(config:)
           super
+          prefer_credentials_file_over_token!
           @client = Client.new
         end
 
@@ -49,29 +50,21 @@ module Madcp
               { label: "Export credentials for MADCP", value: "gws auth export --unmasked" },
             ],
             note: "Paste only the JSON object from gws auth export --unmasked, not the " \
-                  "Using keyring backend line. The exported authorized_user JSON may not contain " \
-                  "the project ID. Set GOOGLE_WORKSPACE_PROJECT_ID explicitly. The JSON is sensitive: " \
-                  "paste it only over HTTPS and do not commit it. If MADCP says it is not authenticated, " \
-                  "confirm the JSON includes type, client_id, client_secret, and a full unmasked " \
-                  "refresh_token, then retry after rebuilding/restarting the container.",
+                  "Using keyring backend line. Leave the short-lived access token field empty: " \
+                  "GOOGLE_WORKSPACE_CLI_TOKEN overrides the refresh-token file and expires quickly. " \
+                  "The exported authorized_user JSON may not contain the project ID — set " \
+                  "GOOGLE_WORKSPACE_PROJECT_ID explicitly. Paste credentials only over HTTPS.",
           }
         end
 
         def auth_fields
           [
             {
-              name: "googleworkspace_token",
-              label: "Google OAuth access token",
-              type: "password",
-              required: false,
-              help: "Optional short-lived token. GOOGLE_WORKSPACE_CLI_TOKEN has highest priority.",
-            },
-            {
               name: "googleworkspace_credentials_json",
               label: "Exported gws credentials JSON",
               type: "textarea",
               required: false,
-              help: "Recommended for Docker: gws auth export --unmasked > credentials.json",
+              help: "Preferred: gws auth export --unmasked (includes refresh_token).",
             },
             {
               name: "googleworkspace_project_id",
@@ -79,6 +72,13 @@ module Madcp
               type: "text",
               required: false,
               help: "Recommended: explicitly sets the project used for quota, billing, and gws helpers.",
+            },
+            {
+              name: "googleworkspace_token",
+              label: "Short-lived access token (discouraged)",
+              type: "password",
+              required: false,
+              help: "Avoid in Docker. Overrides the credentials file and expires in ~1 hour.",
             },
           ]
         end
@@ -121,9 +121,8 @@ module Madcp
           project_id = params["googleworkspace_project_id"].to_s.strip
 
           updates = {}
-          updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = token unless token.empty?
           updates["GOOGLE_WORKSPACE_PROJECT_ID"] = project_id unless project_id.empty?
-          unless credentials_json.empty?
+          if !credentials_json.empty?
             begin
               parsed = JSON.parse(credentials_json)
             rescue JSON::ParserError => e
@@ -136,6 +135,10 @@ module Madcp
             File.write(credentials_path, JSON.pretty_generate(parsed) + "\n", perm: 0o600)
             sync_gws_plain_credentials!(parsed)
             updates["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = credentials_path
+            # Refresh-token file must win: a stale CLI_TOKEN shadows it and breaks all API calls.
+            updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = nil
+          elsif !token.empty?
+            updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = token
           end
           persist_credentials!(updates)
           @client = Client.new
@@ -209,8 +212,13 @@ module Madcp
         end
 
         def google_authenticated?(data, credentials)
+          source = data["credential_source"].to_s
+          # gws may report token_valid for a cached/file token while an expired
+          # GOOGLE_WORKSPACE_CLI_TOKEN still wins at request time.
+          return false if source == "token_env_var" && durable_credentials_file?
+
           return true if data["authenticated"] == true
-          return true if data["token_valid"] == true
+          return true if data["token_valid"] == true && source != "token_env_var"
           return true if %w[authenticated success ok].include?(data["status"].to_s.downcase)
           return false if data["token_valid"] == false
 
@@ -227,12 +235,29 @@ module Madcp
           false
         end
 
+        def durable_credentials_file?
+          path = ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"].to_s
+          return false if path.empty? || !File.file?(path)
+
+          credentials_file_status[:valid] == true
+        end
+
+        def prefer_credentials_file_over_token!
+          return unless durable_credentials_file?
+          return if ENV["GOOGLE_WORKSPACE_CLI_TOKEN"].to_s.empty?
+
+          persist_credentials!("GOOGLE_WORKSPACE_CLI_TOKEN" => nil)
+        end
+
         def authentication_failure_message(status)
           details = []
           details << status[:token_error] if status[:token_error]
           details << status[:credentials_file_error] if status[:credentials_file_error]
           details << status[:error] if status[:error]
 
+          if status[:credential_source].to_s == "token_env_var"
+            details << "GOOGLE_WORKSPACE_CLI_TOKEN is set and overrides the refresh-token credentials file; clear it"
+          end
           if status[:credentials_file].to_s.empty?
             details << "no credentials file was stored"
           elsif status[:credentials_file_valid] == false

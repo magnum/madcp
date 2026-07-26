@@ -112,6 +112,61 @@ class GoogleWorkspaceTest < Minitest::Test
     File.delete(path) if path && File.file?(path)
   end
 
+  def test_auth_status_rejects_token_env_var_when_credentials_file_exists
+    path = File.join(@integration.data_dir, "credentials.json")
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(
+      path,
+      JSON.generate(
+        type: "authorized_user",
+        client_id: "client.apps.googleusercontent.com",
+        client_secret: "secret",
+        refresh_token: "refresh",
+      ),
+    )
+    ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = path
+    ENV["GOOGLE_WORKSPACE_CLI_TOKEN"] = "expired-access-token"
+    @client.define_singleton_method(:auth_status) do
+      JSON.generate(
+        auth_method: "oauth2",
+        token_valid: true,
+        credential_source: "token_env_var",
+        plain_credentials_exists: true,
+        has_refresh_token: true,
+      )
+    end
+
+    status = @integration.auth_status
+
+    refute status[:authenticated]
+    assert_includes(
+      @integration.send(:authentication_failure_message, status),
+      "GOOGLE_WORKSPACE_CLI_TOKEN",
+    )
+  ensure
+    ENV.delete("GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE")
+    ENV.delete("GOOGLE_WORKSPACE_CLI_TOKEN")
+    File.delete(path) if path && File.file?(path)
+  end
+
+  def test_client_omits_cli_token_when_credentials_file_exists
+    path = File.join(@integration.data_dir, "credentials-priority.json")
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, JSON.generate(type: "authorized_user", client_id: "c", client_secret: "s", refresh_token: "r"))
+    ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = path
+    ENV["GOOGLE_WORKSPACE_CLI_TOKEN"] = "stale-token"
+
+    client = Madcp::Servers::GoogleWorkspace::Client.new
+    env = client.instance_variable_get(:@env)
+
+    assert_equal path, env["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"]
+    refute env.key?("GOOGLE_WORKSPACE_CLI_TOKEN")
+  ensure
+    ENV.delete("GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE")
+    ENV.delete("GOOGLE_WORKSPACE_CLI_TOKEN")
+    File.delete(path) if path && File.file?(path)
+  end
+
   def test_authentication_failure_includes_gws_status_details
     @client.define_singleton_method(:auth_status) do
       JSON.generate(auth_method: "none", plain_credentials_exists: false, token_valid: false)

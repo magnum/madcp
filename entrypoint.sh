@@ -3,6 +3,11 @@ set -e
 
 mkdir -p \
   /app/data \
+  /app/data/_oauth \
+  /app/data/cli/basecamp \
+  /app/data/cli/basecamp-cache \
+  /app/data/cli/hey \
+  /app/data/cli/gws \
   /home/madcp/.config/basecamp \
   /home/madcp/.cache/basecamp \
   /home/madcp/.config/hey-cli \

@@ -272,4 +272,60 @@ class AppTest < Minitest::Test
     )
     assert provider.load_access_token(tokens.fetch(:access_token))
   end
+
+  def test_oauth_clients_and_tokens_persist_across_provider_restarts
+    require "tmpdir"
+    Dir.mktmpdir("madcp-oauth") do |root|
+      config = Madcp::Config.new(root: root)
+      integration = REGISTRY.fetch("googleworkspace")
+      provider = Madcp::OAuthProvider.new(config: config, integration: integration)
+      client = provider.register_client(
+        "redirect_uris" => ["https://client.example/callback"],
+        "token_endpoint_auth_method" => "none",
+      )
+      verifier = "b" * 64
+      challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+      login_url = provider.start_authorization(
+        "client_id" => client["client_id"],
+        "redirect_uri" => "https://client.example/callback",
+        "response_type" => "code",
+        "code_challenge" => challenge,
+        "code_challenge_method" => "S256",
+        "state" => "persist-me",
+      )
+      login_state = URI.decode_www_form(URI(login_url).query).to_h.fetch("state")
+      callback_url = provider.authorize_login(
+        username: "admin",
+        password: "secret",
+        state: login_state,
+      )
+      code = URI.decode_www_form(URI(callback_url).query).to_h.fetch("code")
+      tokens = provider.token_request(
+        "grant_type" => "authorization_code",
+        "client_id" => client["client_id"],
+        "code" => code,
+        "code_verifier" => verifier,
+      )
+
+      restarted = Madcp::OAuthProvider.new(config: config, integration: integration)
+      assert restarted.load_access_token(tokens.fetch(:access_token))
+
+      refreshed = restarted.token_request(
+        "grant_type" => "refresh_token",
+        "client_id" => client["client_id"],
+        "refresh_token" => tokens.fetch(:refresh_token),
+      )
+      assert restarted.load_access_token(refreshed.fetch(:access_token))
+
+      again = Madcp::OAuthProvider.new(config: config, integration: integration)
+      assert again.load_access_token(refreshed.fetch(:access_token))
+      assert_raises(Madcp::OAuthProvider::OAuthError) do
+        again.token_request(
+          "grant_type" => "refresh_token",
+          "client_id" => client["client_id"],
+          "refresh_token" => tokens.fetch(:refresh_token),
+        )
+      end
+    end
+  end
 end

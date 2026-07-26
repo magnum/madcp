@@ -170,12 +170,20 @@ MADCP_HOST_PORT=8877
 Open `http://localhost:8877/servers/` locally, or configure the public MCP URLs
 through your HTTPS tunnel/reverse proxy.
 
-The image builds the Basecamp, HEY, and Google Workspace CLIs. Named volumes preserve:
+The image builds the Basecamp, HEY, and Google Workspace CLIs. Durable state is
+bind-mounted from the host `./data` directory:
 
-- MADCP-persisted integration values under `/app/data`;
-- Basecamp CLI configuration/cache;
-- HEY CLI configuration;
-- Google Workspace CLI configuration and encrypted credentials.
+```text
+./data/                  → /app/data          (integration credentials, OAuth store)
+./data/cli/basecamp      → Basecamp CLI config
+./data/cli/basecamp-cache
+./data/cli/hey
+./data/cli/gws           → Google Workspace CLI config
+```
+
+`./data` is gitignored. If you previously used Compose named volumes, copy them
+once into `./data` (or re-paste credentials through `/servers/*/auth`) after
+switching.
 
 ## Authentication
 
@@ -205,10 +213,11 @@ Integration credentials are separate:
   `FATTUREINCLOUD_CLIENT_ID` and `FATTUREINCLOUD_CLIENT_SECRET` first. The
   redirect URI registered at Fatture in Cloud must exactly match
   `${MADCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback`.
-- Google Workspace: paste a short-lived access token or the JSON produced by
-  `gws auth export --unmasked` into `/servers/googleworkspace/auth`. For
-  unattended environments, an exported OAuth credential or service-account
-  JSON file is preferred over a short-lived token.
+- Google Workspace: paste the JSON from `gws auth export --unmasked` into
+  `/servers/googleworkspace/auth`. Leave the short-lived access token empty —
+  `GOOGLE_WORKSPACE_CLI_TOKEN` overrides the refresh-token file and expires
+  quickly. Prefer an exported OAuth credential or service-account JSON. Set
+  `GOOGLE_WORKSPACE_PROJECT_ID` for quota attribution.
 - Toggl Track: paste the personal API token plus organization ID and workspace
   ID into `/servers/toggltrack/auth`. MADCP authenticates with HTTP Basic Auth
   as `token:api_token` against the v9 API.
@@ -260,9 +269,12 @@ References:
 - [API scopes](https://developers.fattureincloud.it/docs/basics/scopes/)
 - [Ruby SDK reference](https://github.com/fattureincloud/fattureincloud-ruby-sdk)
 
-The OAuth token store is currently in memory. Restarting MADCP invalidates MCP
-OAuth sessions, while integration/CLI credentials persist in volumes. A
-persistent multi-instance OAuth store is a future production requirement.
+MCP OAuth clients, access tokens, and refresh tokens are persisted under
+`data/_oauth/<server_id>.json` (mounted via the `madcp-data` volume in Docker).
+Restarting MADCP keeps Claude Custom Connector sessions valid. Short-lived
+authorization codes and login states stay in memory. A shared multi-instance
+OAuth store is still a future production requirement if you run more than one
+MADCP replica.
 
 ## Local development
 

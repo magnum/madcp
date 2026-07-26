@@ -12,9 +12,15 @@ module Madcp
         SEGMENT_PATTERN = /\A[a-zA-Z][a-zA-Z0-9_+-]*\z/
 
         def initialize
+          credentials_file = ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"].to_s.strip
+          # A short-lived GOOGLE_WORKSPACE_CLI_TOKEN has highest priority inside gws and
+          # shadows the refresh-token credentials file once it expires.
+          token = ENV["GOOGLE_WORKSPACE_CLI_TOKEN"].to_s.strip
+          token = "" if !credentials_file.empty? && File.file?(credentials_file)
+
           env = {
-            "GOOGLE_WORKSPACE_CLI_TOKEN" => ENV["GOOGLE_WORKSPACE_CLI_TOKEN"],
-            "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE" => ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"],
+            "GOOGLE_WORKSPACE_CLI_TOKEN" => token,
+            "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE" => credentials_file,
             "GOOGLE_WORKSPACE_CLI_CLIENT_ID" => ENV["GOOGLE_WORKSPACE_CLI_CLIENT_ID"],
             "GOOGLE_WORKSPACE_CLI_CLIENT_SECRET" => ENV["GOOGLE_WORKSPACE_CLI_CLIENT_SECRET"],
             "GOOGLE_WORKSPACE_CLI_CONFIG_DIR" => ENV["GOOGLE_WORKSPACE_CLI_CONFIG_DIR"],

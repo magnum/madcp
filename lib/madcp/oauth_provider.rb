@@ -2,6 +2,8 @@
 
 require "base64"
 require "digest"
+require "fileutils"
+require "json"
 require "openssl"
 require "securerandom"
 require "uri"
@@ -36,6 +38,7 @@ module Madcp
       @access_tokens = {}
       @refresh_tokens = {}
       @mutex = Mutex.new
+      load_store!
     end
 
     def authorization_server_metadata
@@ -88,7 +91,10 @@ module Madcp
         "client_name" => metadata["client_name"],
         "scope" => metadata["scope"] || scope,
       }.compact
-      @mutex.synchronize { @clients[client_id] = client }
+      @mutex.synchronize do
+        @clients[client_id] = client
+        persist_store!
+      end
       client
     end
 
@@ -165,6 +171,7 @@ module Madcp
         return nil unless data
         if data[:expires_at] < Time.now.to_i
           @access_tokens.delete(token)
+          persist_store!
           return nil
         end
         data
@@ -175,6 +182,7 @@ module Madcp
       @mutex.synchronize do
         @access_tokens.delete(token)
         @refresh_tokens.delete(token)
+        persist_store!
       end
     end
 
@@ -185,6 +193,7 @@ module Madcp
         @refresh_tokens.clear
         @auth_codes.clear
         @states.clear
+        persist_store!
         count
       end
     end
@@ -200,6 +209,47 @@ module Madcp
     private
 
     def scope = "madcp:#{@integration.id}"
+
+    def store_path
+      File.join(@config.root, "data", "_oauth", "#{@integration.id}.json")
+    end
+
+    def load_store!
+      return unless File.file?(store_path)
+
+      data = JSON.parse(File.read(store_path))
+      @clients = data.fetch("clients", {})
+      @access_tokens = deserialize_token_map(data["access_tokens"])
+      @refresh_tokens = deserialize_token_map(data["refresh_tokens"])
+    rescue JSON::ParserError, Errno::ENOENT
+      @clients = {}
+      @access_tokens = {}
+      @refresh_tokens = {}
+    end
+
+    def persist_store!
+      FileUtils.mkdir_p(File.dirname(store_path))
+      payload = {
+        "clients" => @clients,
+        "access_tokens" => serialize_token_map(@access_tokens),
+        "refresh_tokens" => serialize_token_map(@refresh_tokens),
+      }
+      tmp = "#{store_path}.#{Process.pid}.tmp"
+      File.write(tmp, JSON.generate(payload), perm: 0o600)
+      File.rename(tmp, store_path)
+    end
+
+    def serialize_token_map(map)
+      map.transform_values do |data|
+        data.transform_keys(&:to_s)
+      end
+    end
+
+    def deserialize_token_map(raw)
+      (raw || {}).transform_values do |data|
+        data.transform_keys(&:to_sym)
+      end
+    end
 
     def exchange_code(params)
       client = authenticate_client(params)
@@ -218,7 +268,15 @@ module Madcp
 
     def exchange_refresh(params)
       client = authenticate_client(params)
-      data = @mutex.synchronize { @refresh_tokens.delete(params["refresh_token"].to_s) }
+      data = @mutex.synchronize do
+        deleted = @refresh_tokens.delete(params["refresh_token"].to_s)
+        if deleted
+          # Persist rotation immediately so a crash cannot leave the old
+          # refresh token valid alongside a newly issued one.
+          persist_store!
+        end
+        deleted
+      end
       raise OAuthError.new(400, "invalid_grant", "invalid refresh token") unless data
       raise OAuthError.new(400, "invalid_grant", "refresh token expired") if data[:expires_at] < Time.now.to_i
       raise OAuthError.new(400, "invalid_grant", "client mismatch") unless data[:client_id] == client["client_id"]
@@ -249,6 +307,7 @@ module Madcp
           token: refresh, client_id: client_id, subject: subject, resource: resource,
           expires_at: now + REFRESH_TTL,
         }
+        persist_store!
       end
       {
         access_token: access,
