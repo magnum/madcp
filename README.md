@@ -16,6 +16,9 @@ The initial integrations are:
 - `servers/googleworkspace/` — typed Docs, Sheets, and Drive tools plus safe
   dynamic access to every Google Workspace API exposed by
   [`googleworkspace/cli`](https://github.com/googleworkspace/cli)
+- `servers/toggltrack/` — 22 tools for me, organizations, workspaces, projects,
+  tags, and time entries through the
+  [Toggl Track API v9](https://engineering.toggl.com/docs/track/)
 
 The existing `hey-mcp` and `basecamp-mcp` repositories are not imported or
 modified. The two directories included here are self-contained prototypes that
@@ -42,9 +45,12 @@ madcp/
 │   ├── googleworkspace/
 │   │   ├── server.rb
 │   │   └── googleworkspace_client.rb
-│   └── hey/
+│   ├── hey/
+│   │   ├── server.rb
+│   │   └── hey_client.rb
+│   └── toggltrack/
 │       ├── server.rb
-│       └── hey_client.rb
+│       └── toggltrack_client.rb
 ├── views/
 └── server.rb
 ```
@@ -112,6 +118,7 @@ https://madcp.example.com/servers/hey/mcp
 https://madcp.example.com/servers/basecamp/mcp
 https://madcp.example.com/servers/fattureincloud/mcp
 https://madcp.example.com/servers/googleworkspace/mcp
+https://madcp.example.com/servers/toggltrack/mcp
 ```
 
 `/tools/<tool>` is a convenience API for testing and automation. MCP clients
@@ -134,6 +141,7 @@ HEY_ALLOW_WRITE=true
 BASECAMP_ALLOW_WRITE=false
 FATTUREINCLOUD_ALLOW_WRITE=false
 GOOGLEWORKSPACE_ALLOW_WRITE=false
+TOGGLTRACK_ALLOW_WRITE=false
 ```
 
 The integration marks mutations with `write: true`. MADCP enforces the policy
@@ -180,6 +188,7 @@ own OAuth issuer:
 /servers/basecamp
 /servers/fattureincloud
 /servers/googleworkspace
+/servers/toggltrack
 ```
 
 MADCP supports authorization code + PKCE, refresh tokens, token revocation,
@@ -200,6 +209,9 @@ Integration credentials are separate:
   `gws auth export --unmasked` into `/servers/googleworkspace/auth`. For
   unattended environments, an exported OAuth credential or service-account
   JSON file is preferred over a short-lived token.
+- Toggl Track: paste the personal API token plus organization ID and workspace
+  ID into `/servers/toggltrack/auth`. MADCP authenticates with HTTP Basic Auth
+  as `token:api_token` against the v9 API.
 
 External OAuth token retrieval is an integration capability, separate from the
 OAuth issuer MADCP exposes to MCP clients. Its launch always requires the MADCP
