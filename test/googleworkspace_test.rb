@@ -65,21 +65,86 @@ class GoogleWorkspaceTest < Minitest::Test
   def test_catalog_has_typed_and_dynamic_tools_with_write_gates
     tools = @integration.tool_catalog
 
-    assert_equal 18, tools.length
+    assert_equal 22, tools.length
     assert tools.any? { |tool| tool[:name] == "googleworkspace_doc" && !tool[:write] }
     assert tools.any? { |tool| tool[:name] == "googleworkspace_sheet_values_append" && tool[:write] }
     assert tools.any? { |tool| tool[:name] == "googleworkspace_api_read" && !tool[:write] }
     assert tools.any? { |tool| tool[:name] == "googleworkspace_api_call" && tool[:write] }
+    assert tools.any? { |tool| tool[:name] == "googleworkspace_drive_comment_create" && tool[:write] }
+    assert tools.any? { |tool| tool[:name] == "googleworkspace_drive_comments_list" && !tool[:write] }
     assert tools.select { |tool| tool[:write] }.all? { |tool| !tool[:enabled] }
 
     batch = tools.find { |tool| tool[:name] == "googleworkspace_doc_batch_update" }
     assert batch[:write]
-    assert batch[:input_schema][:properties].key?(:suggest)
-    assert batch[:input_schema][:properties].key?(:write_mode)
-    assert_includes batch[:description], "suggest=true"
+    refute batch[:input_schema][:properties].key?(:suggest)
+    refute batch[:input_schema][:properties].key?(:write_mode)
+    assert_includes batch[:description], "direct edits"
   end
 
-  def test_doc_batch_update_suggest_sets_write_control
+  def test_drive_comment_create_builds_anchored_body_and_default_fields
+    ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
+    begin
+      @integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+      @client = RecordingClient.new
+      @integration.instance_variable_set(:@client, @client)
+
+      @integration.call_tool(
+        "googleworkspace_drive_comment_create",
+        file_id: "doc-1",
+        content: "Tighten this paragraph",
+        anchor_line: 12,
+        quoted_text: "original sentence",
+      )
+
+      kind, options = @client.calls.fetch(0)
+      assert_equal :api, kind
+      assert_equal "drive", options[:service]
+      assert_equal ["comments"], options[:resources]
+      assert_equal "create", options[:method]
+      assert_equal "doc-1", options.dig(:params, :fileId)
+      assert_equal Madcp::Servers::GoogleWorkspace::Server::DEFAULT_COMMENT_FIELDS,
+                   options.dig(:params, :fields)
+      refute options.dig(:params, :supportsAllDrives)
+
+      body = options[:body]
+      assert_equal "Tighten this paragraph", body[:content]
+      assert_equal({ "value" => "original sentence", "mimeType" => "text/plain" }, deep_stringify(body[:quotedFileContent]))
+      anchor = JSON.parse(body[:anchor])
+      assert_equal "drive#commentRegion", anchor.dig("region", "kind")
+      assert_equal 12, anchor.dig("region", "line")
+      assert_equal "head", anchor.dig("region", "rev")
+    ensure
+      ENV.delete("GOOGLEWORKSPACE_ALLOW_WRITE")
+    end
+  end
+
+  def test_drive_comment_reply_resolve
+    ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
+    begin
+      @integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+      @client = RecordingClient.new
+      @integration.instance_variable_set(:@client, @client)
+
+      @integration.call_tool(
+        "googleworkspace_drive_comment_reply",
+        file_id: "doc-1",
+        comment_id: "c1",
+        content: "Done",
+        action: "resolve",
+      )
+
+      _, options = @client.calls.fetch(0)
+      assert_equal ["replies"], options[:resources]
+      assert_equal "create", options[:method]
+      assert_equal({ content: "Done", action: "resolve" }, options[:body])
+      assert_equal Madcp::Servers::GoogleWorkspace::Server::DEFAULT_REPLY_FIELDS,
+                   options.dig(:params, :fields)
+    ensure
+      ENV.delete("GOOGLEWORKSPACE_ALLOW_WRITE")
+    end
+  end
+
+  def test_doc_batch_update_sends_direct_edit_requests_only
     old = ENV["GOOGLEWORKSPACE_ALLOW_WRITE"]
     ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
     integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
@@ -90,6 +155,7 @@ class GoogleWorkspaceTest < Minitest::Test
       "googleworkspace_doc_batch_update",
       document_id: "doc-1",
       suggest: true,
+      write_mode: "SUGGEST",
       requests: [{ insertText: { text: "Hi", location: { index: 1 } } }],
     )
 
@@ -97,26 +163,12 @@ class GoogleWorkspaceTest < Minitest::Test
     assert_equal "docs", options[:service]
     assert_equal "batchUpdate", options[:method]
     assert_equal(
-      deep_stringify(
-        requests: [{ insertText: { text: "Hi", location: { index: 1 } } }],
-        writeControl: { writeMode: "SUGGEST" },
-      ),
+      deep_stringify(requests: [{ insertText: { text: "Hi", location: { index: 1 } } }]),
       deep_stringify(options[:body]),
     )
+    refute deep_stringify(options[:body]).key?("writeControl")
   ensure
     ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = old
-  end
-
-  def test_doc_batch_update_edit_mode_omits_write_control
-    body = @integration.send(
-      :docs_batch_update_body,
-      requests: [{ insertText: { text: "x", location: { index: 1 } } }],
-      suggest: false,
-      write_mode: "EDIT",
-    )
-
-    assert_equal [{ insertText: { text: "x", location: { index: 1 } } }], body[:requests]
-    refute body.key?(:writeControl)
   end
 
   def test_auth_status_accepts_gws_diagnostic_prefix

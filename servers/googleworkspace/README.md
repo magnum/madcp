@@ -43,13 +43,26 @@ In Docker, CLI config lives under `./data/cli/gws`. MadCP also stores credential
 
 ## Tools
 
-About **18** tools, including:
+About **22** tools, including:
 
-- Typed Docs / Sheets / Drive helpers (Drive defaults to shared-drive-friendly flags: `supportsAllDrives`, etc.)
-- `googleworkspace_doc_batch_update` — Docs `batchUpdate`; set `suggest=true` or `write_mode=SUGGEST` for collaborative suggestion mode instead of direct edits
+- Typed Docs / Sheets / Drive helpers (Drive file tools default to shared-drive-friendly flags: `supportsAllDrives`, etc.)
+- `googleworkspace_doc_batch_update` — Docs `batchUpdate` as **direct edits** only (`writeControl` supports revision IDs, not suggestion mode)
+- Drive comments — `googleworkspace_drive_comments_list`, `googleworkspace_drive_comment_get`, `googleworkspace_drive_comment_create`, `googleworkspace_drive_comment_reply` (reply can `resolve` / `reopen`)
 - `googleworkspace_discover` / `googleworkspace_schema`
 - `googleworkspace_api_read` — read-ish Discovery methods
 - `googleworkspace_api_call` — any Discovery method (`write: true`)
+
+### Comments vs direct edits
+
+The public Docs API has **no suggestion/review write mode** (`writeControl` only has `targetRevisionId` / `requiredRevisionId`). For review notes without rewriting the document, use Drive comments.
+
+| Goal | Tool |
+| --- | --- |
+| Leave a review comment on a Doc/file | `googleworkspace_drive_comment_create` |
+| Reply / resolve a comment | `googleworkspace_drive_comment_reply` |
+| Change document content | `googleworkspace_doc_batch_update` (direct edit) |
+
+Optional `anchor_line` / `quoted_text` / `anchor` on create are best-effort. Google Workspace editor apps treat API-defined anchors as **unanchored** in the UI (comments still appear under All Comments). True paragraph pin-to-text like the Docs UI is not fully available via the Drive Comments API.
 
 `gws` builds its command tree from Google Discovery documents, so newly published methods can be used without changing MadCP. The CLI is community-driven and is not an officially supported Google product.
 

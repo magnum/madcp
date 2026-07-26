@@ -13,6 +13,11 @@ module Madcp
         version "0.1.0"
 
         SAFE_READ_METHODS = %w[get list search lookup query export download batchGet].freeze
+        DEFAULT_COMMENT_FIELDS =
+          "id,content,htmlContent,author,createdTime,modifiedTime,resolved,deleted,anchor," \
+          "quotedFileContent,replies(id,content,htmlContent,author,createdTime,modifiedTime,action)"
+        DEFAULT_REPLY_FIELDS =
+          "id,content,htmlContent,author,createdTime,modifiedTime,action"
 
         def initialize(config:)
           super
@@ -22,9 +27,13 @@ module Madcp
 
         def instructions
           "Use typed Google Docs and Sheets tools for common document editing. " \
-            "For Docs, googleworkspace_doc_batch_update can apply changes as collaborative " \
-            "suggestions: set suggest=true or write_mode=SUGGEST (Docs API writeControl). " \
-            "Drive tools enable shared-drive access by default via supportsAllDrives. " \
+            "googleworkspace_doc_batch_update always applies direct edits " \
+            "(Docs API has no suggestion/review mode). " \
+            "For review feedback without rewriting the doc, use googleworkspace_drive_comment_create " \
+            "(optional anchor_line / quoted_text). Workspace editor UIs treat API-defined anchors " \
+            "as unanchored, but comments still appear under All Comments; reply/resolve via " \
+            "googleworkspace_drive_comment_reply. " \
+            "Drive file tools enable shared-drive access by default via supportsAllDrives. " \
             "Use googleworkspace_discover and googleworkspace_schema to inspect any other Workspace API. " \
             "The unrestricted generic API tool is write-gated."
         end
@@ -384,6 +393,129 @@ module Madcp
           ) do |file_id:, fields: nil|
             gws_api("drive", ["files"], "get", params: compact_hash(fileId: file_id, fields: fields))
           end
+
+          define_tool(
+            name: "googleworkspace_drive_comments_list",
+            description: "List Drive comments on a file (Google Docs, Sheets, etc.). " \
+                         "Requires a fields mask; MadCP supplies a useful default.",
+            properties: {
+              file_id: string_prop("Drive file ID (same as Docs document ID for Google Docs)"),
+              include_deleted: boolean_prop("Include deleted comments"),
+              page_size: integer_prop("Maximum comments per page (max 100)"),
+              page_token: string_prop("Pagination token"),
+              start_modified_time: string_prop("RFC 3339 lower bound for modifiedTime"),
+              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+            },
+            required: ["file_id"],
+          ) do |file_id:, include_deleted: nil, page_size: nil, page_token: nil, start_modified_time: nil, fields: nil|
+            gws_api(
+              "drive",
+              ["comments"],
+              "list",
+              params: compact_hash(
+                fileId: file_id,
+                includeDeleted: include_deleted,
+                pageSize: page_size,
+                pageToken: page_token,
+                startModifiedTime: start_modified_time,
+                fields: drive_comment_fields(fields),
+              ),
+            )
+          end
+
+          define_tool(
+            name: "googleworkspace_drive_comment_get",
+            description: "Get a single Drive comment by ID.",
+            properties: {
+              file_id: string_prop("Drive file ID"),
+              comment_id: string_prop("Comment ID"),
+              include_deleted: boolean_prop("Include deleted comment content"),
+              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+            },
+            required: %w[file_id comment_id],
+          ) do |file_id:, comment_id:, include_deleted: nil, fields: nil|
+            gws_api(
+              "drive",
+              ["comments"],
+              "get",
+              params: compact_hash(
+                fileId: file_id,
+                commentId: comment_id,
+                includeDeleted: include_deleted,
+                fields: drive_comment_fields(fields),
+              ),
+            )
+          end
+
+          define_tool(
+            name: "googleworkspace_drive_comment_create",
+            description: "Create a Drive comment on a file (shown in Docs All Comments). " \
+                         "Optional anchor_line / quoted_text / anchor for best-effort anchoring; " \
+                         "Google Workspace editors treat API-defined anchors as unanchored in the UI. " \
+                         "Docs API has no suggestion mode — use comments for review notes, or " \
+                         "googleworkspace_doc_batch_update for direct edits.",
+            properties: {
+              file_id: string_prop("Drive file ID (Docs document ID for Google Docs)"),
+              content: string_prop("Plain-text comment body"),
+              quoted_text: string_prop("Quoted file content the comment refers to (helps reviewers)"),
+              quoted_mime_type: string_prop("MIME type for quoted_text (default text/plain)"),
+              anchor_line: integer_prop(
+                "Best-effort line number for Docs region anchor (rev=head). " \
+                "Workspace UIs may still show the comment as unanchored.",
+              ),
+              anchor: {
+                description: "Drive comment anchor as a JSON string, or an object that MadCP " \
+                             "serializes to JSON (overrides anchor_line).",
+              },
+              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+            },
+            required: %w[file_id content],
+            write: true,
+          ) do |file_id:, content:, quoted_text: nil, quoted_mime_type: nil, anchor_line: nil, anchor: nil, fields: nil|
+            gws_api(
+              "drive",
+              ["comments"],
+              "create",
+              params: compact_hash(fileId: file_id, fields: drive_comment_fields(fields)),
+              body: drive_comment_body(
+                content: content,
+                anchor: anchor,
+                anchor_line: anchor_line,
+                quoted_text: quoted_text,
+                quoted_mime_type: quoted_mime_type,
+              ),
+            )
+          end
+
+          define_tool(
+            name: "googleworkspace_drive_comment_reply",
+            description: "Reply to a Drive comment. Set action=resolve or reopen to close/reopen " \
+                         "the discussion (resolve requires a reply).",
+            properties: {
+              file_id: string_prop("Drive file ID"),
+              comment_id: string_prop("Parent comment ID"),
+              content: string_prop("Plain-text reply (required unless action alone is enough)"),
+              action: string_prop("Optional reply action: resolve or reopen"),
+              fields: string_prop("Response field mask (MadCP default if omitted)"),
+            },
+            required: %w[file_id comment_id],
+            write: true,
+          ) do |file_id:, comment_id:, content: nil, action: nil, fields: nil|
+            body = compact_hash(content: content, action: action)
+            raise "content or action is required" if body.empty?
+
+            gws_api(
+              "drive",
+              ["replies"],
+              "create",
+              params: compact_hash(
+                fileId: file_id,
+                commentId: comment_id,
+                fields: drive_comment_fields(fields, reply: true),
+              ),
+              body: body,
+            )
+          end
         end
 
         def define_docs_tools
@@ -425,9 +557,9 @@ module Madcp
 
           define_tool(
             name: "googleworkspace_doc_batch_update",
-            description: "Apply rich-text and structural updates to a Google Docs document. " \
-                         "Set suggest=true (or write_mode=SUGGEST) to apply the requests as " \
-                         "collaborative suggestions instead of direct edits (Docs API writeControl).",
+            description: "Apply rich-text and structural updates to a Google Docs document as " \
+                         "direct edits. The public Docs API has no suggestion/review write mode; " \
+                         "for marginal notes use googleworkspace_drive_comment_create instead.",
             properties: {
               document_id: string_prop("Google Docs document ID"),
               requests: {
@@ -435,24 +567,16 @@ module Madcp
                 items: { type: "object" },
                 description: "Docs API batchUpdate requests (insertText, replaceAllText, styles, …)",
               },
-              suggest: boolean_prop(
-                "If true, apply requests as suggestions (writeControl.writeMode=SUGGEST). " \
-                "Default false = direct edit.",
-              ),
-              write_mode: string_prop(
-                "Docs writeControl.writeMode: EDIT (direct, default) or SUGGEST (suggestion mode). " \
-                "Overrides suggest when set.",
-              ),
             },
             required: %w[document_id requests],
             write: true,
-          ) do |document_id:, requests:, suggest: false, write_mode: nil|
+          ) do |document_id:, requests:|
             gws_api(
               "docs",
               ["documents"],
               "batchUpdate",
               params: { documentId: document_id },
-              body: docs_batch_update_body(requests: requests, suggest: suggest, write_mode: write_mode),
+              body: { requests: Array(requests) },
             )
           end
         end
@@ -629,27 +753,52 @@ module Madcp
           end
         end
 
-        def docs_batch_update_body(requests:, suggest: false, write_mode: nil)
-          body = { requests: Array(requests) }
-          mode = docs_write_mode(suggest: suggest, write_mode: write_mode)
-          body[:writeControl] = { writeMode: mode } if mode
+        def drive_comment_fields(fields, reply: false)
+          value = fields.to_s.strip
+          return value unless value.empty?
+
+          reply ? DEFAULT_REPLY_FIELDS : DEFAULT_COMMENT_FIELDS
+        end
+
+        def drive_comment_body(content:, anchor: nil, anchor_line: nil, quoted_text: nil, quoted_mime_type: nil)
+          body = { content: content }
+          anchor_json = normalize_comment_anchor(anchor)
+          if anchor_json
+            body[:anchor] = anchor_json
+          elsif !anchor_line.nil?
+            body[:anchor] = JSON.generate(
+              region: {
+                kind: "drive#commentRegion",
+                line: Integer(anchor_line),
+                rev: "head",
+              },
+            )
+          end
+
+          quoted = quoted_text.to_s
+          unless quoted.empty?
+            mime = quoted_mime_type.to_s.strip
+            body[:quotedFileContent] = {
+              value: quoted,
+              mimeType: mime.empty? ? "text/plain" : mime,
+            }
+          end
+
           body
         end
 
-        def docs_write_mode(suggest: false, write_mode: nil)
-          raw = write_mode.to_s.strip
-          if !raw.empty?
-            mode = raw.upcase
-            raise "write_mode must be EDIT or SUGGEST" unless %w[EDIT SUGGEST].include?(mode)
+        def normalize_comment_anchor(anchor)
+          return nil if anchor.nil?
 
-            return mode == "EDIT" ? nil : mode
+          case anchor
+          when String
+            stripped = anchor.strip
+            stripped.empty? ? nil : stripped
+          when Hash
+            JSON.generate(anchor)
+          else
+            JSON.generate(anchor)
           end
-
-          truthy_suggest?(suggest) ? "SUGGEST" : nil
-        end
-
-        def truthy_suggest?(value)
-          value == true || %w[1 true yes on].include?(value.to_s.downcase)
         end
 
         def with_drive_shared_support(service, resources, method, params)
@@ -658,6 +807,9 @@ module Madcp
           merged = (params || {}).to_h.transform_keys(&:to_s)
           resource_path = Array(resources).map(&:to_s)
           method_name = method.to_s
+
+          # comments/replies do not accept supportsAllDrives
+          return compact_hash(merged.transform_keys(&:to_sym)) if resource_path.intersect?(%w[comments replies])
 
           supports_methods = %w[
             get list create update copy delete export download
