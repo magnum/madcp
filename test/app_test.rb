@@ -110,6 +110,37 @@ class AppTest < Minitest::Test
     assert_includes JSON.parse(read.body).dig("result", "contents", 0, "text"), "name: hey"
   end
 
+  def test_mcp_list_tools_preserve_integration_execution_context
+    cases = {
+      "hey" => ["hey_boxes", { ok: true, data: [{ id: 1, name: "imbox" }] }],
+      "basecamp" => ["basecamp_projects", { ok: true, data: [{ id: 1, name: "Demo" }] }],
+    }
+
+    cases.each do |server_id, (tool_name, cli_output)|
+      client = REGISTRY.fetch(server_id).instance_variable_get(:@client)
+      client.define_singleton_method(:run) { |*| JSON.generate(cli_output) }
+
+      response = @request.post(
+        "/servers/#{server_id}/mcp",
+        "HTTP_HOST" => "localhost",
+        "HTTP_AUTHORIZATION" => "Bearer static-test-token",
+        "CONTENT_TYPE" => "application/json",
+        input: JSON.generate(
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: { name: tool_name, arguments: {} },
+        ),
+      )
+      payload = JSON.parse(response.body)
+
+      assert_nil payload["error"], payload.dig("error", "data")
+      assert_includes payload.dig("result", "content", 0, "text"), "\"name\":\""
+    ensure
+      client.singleton_class.remove_method(:run) if client&.singleton_methods&.include?(:run)
+    end
+  end
+
   def test_direct_write_tool_is_blocked_before_cli_execution
     response = @request.post(
       "/servers/hey/tools/hey_compose",

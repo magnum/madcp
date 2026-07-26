@@ -54,6 +54,7 @@ module Madcp
     def mcp_server
       configure_once!
       @mcp_server ||= begin
+        integration = self
         server = MCP::Server.new(
           name: id,
           version: version,
@@ -86,15 +87,18 @@ module Madcp
             description: definition.description,
             input_schema: definition.input_schema,
           ) do |**arguments|
-            if definition.write && !allow_write_methods?
-              text_response(
-                "ERROR: write method disabled. Set MADCP_#{id.upcase}_ALLOW_WRITE_METHODS=true.",
+            if definition.write && !integration.allow_write_methods?
+              integration.send(
+                :text_response,
+                "ERROR: write method disabled. Set MADCP_#{integration.id.upcase}_ALLOW_WRITE_METHODS=true.",
               )
             else
-              definition.handler.call(**arguments)
+              allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
+              tool_arguments = arguments.select { |key, _| allowed.include?(key.to_sym) }
+              integration.instance_exec(**tool_arguments, &definition.handler)
             end
           rescue StandardError => e
-            text_response("ERROR: #{e.message}")
+            integration.send(:text_response, "ERROR: #{e.message}")
           end
         end
         server
@@ -120,8 +124,11 @@ module Madcp
       raise KeyError, "unknown tool: #{name}" unless definition
       raise SecurityError, "write method disabled" if definition.write && !allow_write_methods?
 
-      symbolize_keys = arguments.to_h.transform_keys(&:to_sym)
-      definition.handler.call(**symbolize_keys)
+      allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
+      tool_arguments = arguments.to_h.transform_keys(&:to_sym).select do |key, _|
+        allowed.include?(key)
+      end
+      instance_exec(**tool_arguments, &definition.handler)
     end
 
     # Integration contract -------------------------------------------------
