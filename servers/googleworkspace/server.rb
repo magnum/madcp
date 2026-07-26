@@ -21,6 +21,7 @@ module Madcp
 
         def instructions
           "Use typed Google Docs and Sheets tools for common document editing. " \
+            "Drive tools enable shared-drive access by default via supportsAllDrives. " \
             "Use googleworkspace_discover and googleworkspace_schema to inspect any other Workspace API. " \
             "The unrestricted generic API tool is write-gated."
         end
@@ -314,28 +315,32 @@ module Madcp
         def define_drive_tools
           define_tool(
             name: "googleworkspace_drive_files",
-            description: "List or search Google Drive files.",
+            description: "List or search Google Drive files, including shared drives.",
             properties: {
               query: string_prop("Drive q expression"),
               page_size: integer_prop("Maximum files"),
               page_token: string_prop("Pagination token"),
               order_by: string_prop("Drive orderBy expression"),
               fields: string_prop("Response field mask"),
+              corpora: string_prop("user, domain, drive, or allDrives; defaults to allDrives"),
+              drive_id: string_prop("Shared drive ID when corpora is drive"),
             },
-          ) do |query: nil, page_size: 50, page_token: nil, order_by: nil, fields: nil|
+          ) do |query: nil, page_size: 50, page_token: nil, order_by: nil, fields: nil, corpora: nil, drive_id: nil|
             params = compact_hash(
               q: query,
               pageSize: page_size,
               pageToken: page_token,
               orderBy: order_by,
               fields: fields,
+              corpora: corpora,
+              driveId: drive_id,
             )
             gws_api("drive", ["files"], "list", params: params)
           end
 
           define_tool(
             name: "googleworkspace_drive_file",
-            description: "Get Google Drive file metadata.",
+            description: "Get Google Drive file metadata, including files on shared drives.",
             properties: {
               file_id: string_prop("Drive file ID"),
               fields: string_prop("Response field mask"),
@@ -563,6 +568,7 @@ module Madcp
         end
 
         def gws_api(service, resources, method, params: nil, body: nil)
+          params = with_drive_shared_support(service, resources, method, params)
           gws_call do
             @client.api(
               service: service,
@@ -572,6 +578,33 @@ module Madcp
               body: body,
             )
           end
+        end
+
+        def with_drive_shared_support(service, resources, method, params)
+          return params unless service.to_s == "drive"
+
+          merged = (params || {}).to_h.transform_keys(&:to_s)
+          resource_path = Array(resources).map(&:to_s)
+          method_name = method.to_s
+
+          supports_methods = %w[
+            get list create update copy delete export download
+            batchGet createSubscription
+          ]
+          if supports_methods.include?(method_name) || resource_path.include?("files") || resource_path.include?("permissions") || resource_path.include?("changes")
+            merged["supportsAllDrives"] = true unless merged.key?("supportsAllDrives")
+          end
+
+          if resource_path == ["files"] && method_name == "list"
+            merged["includeItemsFromAllDrives"] = true unless merged.key?("includeItemsFromAllDrives")
+            if merged["driveId"].to_s.empty?
+              merged["corpora"] = "allDrives" if merged["corpora"].to_s.empty?
+            else
+              merged["corpora"] = "drive" if merged["corpora"].to_s.empty?
+            end
+          end
+
+          compact_hash(merged.transform_keys(&:to_sym))
         end
 
         def gws_call

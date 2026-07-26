@@ -161,6 +161,34 @@ class GoogleWorkspaceTest < Minitest::Test
     assert_equal "Data!A1:C4", options.dig(:params, :range)
   end
 
+  def test_drive_tools_enable_shared_drive_support_by_default
+    @integration.call_tool("googleworkspace_drive_file", file_id: "shared-file")
+    kind, options = @client.calls.fetch(0)
+    assert_equal :api, kind
+    assert_equal "drive", options[:service]
+    assert_equal true, options.dig(:params, :supportsAllDrives)
+
+    @client.calls.clear
+    @integration.call_tool("googleworkspace_drive_files", query: "name contains 'brief'")
+    _, list_options = @client.calls.fetch(0)
+    assert_equal true, list_options.dig(:params, :supportsAllDrives)
+    assert_equal true, list_options.dig(:params, :includeItemsFromAllDrives)
+    assert_equal "allDrives", list_options.dig(:params, :corpora)
+  end
+
+  def test_drive_generic_read_preserves_explicit_shared_drive_overrides
+    @integration.call_tool(
+      "googleworkspace_api_read",
+      service: "drive",
+      resources: ["files"],
+      method: "get",
+      params: { fileId: "abc", supportsAllDrives: false },
+    )
+
+    _, options = @client.calls.fetch(0)
+    assert_equal false, options.dig(:params, :supportsAllDrives)
+  end
+
   def test_dynamic_read_rejects_mutations_and_bodies
     error = assert_raises(RuntimeError) do
       @integration.call_tool(
