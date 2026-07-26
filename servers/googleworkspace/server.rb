@@ -32,14 +32,24 @@ module Madcp
             steps: [
               "Set up or select the Google Cloud project and enable the Workspace APIs.",
               "Sign in with the Google account MADCP should use.",
+              "Verify the active credential source and the project associated with the OAuth client.",
               "Export unmasked credentials containing the refresh token.",
+              "Set GOOGLE_WORKSPACE_PROJECT_ID in MADCP to make quota and billing attribution explicit.",
             ],
             commands: [
               { label: "Set up the Google Cloud project", value: "gws auth setup" },
               { label: "Authorize your Google account", value: "gws auth login" },
+              { label: "Inspect active authentication", value: "gws auth status" },
+              {
+                label: "Read the project ID from the default OAuth client",
+                value: "jq -r '.installed.project_id // .web.project_id // .project_id' ~/.config/gws/client_secret.json",
+              },
               { label: "Export credentials for MADCP", value: "gws auth export --unmasked" },
             ],
-            note: "The exported JSON is sensitive. Paste it only over HTTPS and do not commit it.",
+            note: "The exported authorized_user JSON may not contain the project ID. " \
+                  "It identifies the Google account and OAuth client; GOOGLE_WORKSPACE_PROJECT_ID " \
+                  "selects the project used for quota, billing, and helpers. The JSON is sensitive: " \
+                  "paste it only over HTTPS and do not commit it.",
           }
         end
 
@@ -64,7 +74,7 @@ module Madcp
               label: "Google Cloud project ID",
               type: "text",
               required: false,
-              help: "Optional quota/billing project used by gws helpers.",
+              help: "Recommended: explicitly sets the project used for quota, billing, and gws helpers.",
             },
           ]
         end
