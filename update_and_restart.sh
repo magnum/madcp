@@ -35,3 +35,7 @@ docker compose up --build -d
 echo
 echo "==> Done"
 docker compose ps
+
+echo
+echo "==> Following logs (Ctrl+C to stop)"
+docker compose logs -f
