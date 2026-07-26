@@ -34,10 +34,10 @@ module Madcp
                          "Then paste the complete exported JSON into the credentials field below.",
             steps: [
               "Set up or select the Google Cloud project and enable the Workspace APIs.",
-              "Sign in with the Google account MADCP should use.",
+              "Sign in with the Google account MadCP should use.",
               "Verify the active credential source and the project associated with the OAuth client.",
               "Export unmasked credentials containing the refresh token.",
-              "Set GOOGLE_WORKSPACE_PROJECT_ID in MADCP to make quota and billing attribution explicit.",
+              "Set GOOGLE_WORKSPACE_PROJECT_ID in MadCP to make quota and billing attribution explicit.",
             ],
             commands: [
               { label: "Set up the Google Cloud project", value: "gws auth setup" },
@@ -47,7 +47,7 @@ module Madcp
                 label: "Read the project ID from the default OAuth client",
                 value: "jq -r '.installed.project_id // .web.project_id // .project_id' ~/.config/gws/client_secret.json",
               },
-              { label: "Export credentials for MADCP", value: "gws auth export --unmasked" },
+              { label: "Export credentials for MadCP", value: "gws auth export --unmasked" },
             ],
             note: "Paste only the JSON object from gws auth export --unmasked, not the " \
                   "Using keyring backend line. Leave the short-lived access token field empty: " \

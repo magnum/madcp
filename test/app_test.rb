@@ -172,7 +172,7 @@ class AppTest < Minitest::Test
 
     html = RENDERER.page(
       "servers",
-      title: "MADCP integrations",
+      title: "MadCP integrations",
       integrations: integrations,
       public_url: CONFIG.public_url,
       repo_url: "https://github.com/magnum/madcp",

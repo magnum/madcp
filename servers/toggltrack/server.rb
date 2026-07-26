@@ -25,7 +25,7 @@ module Madcp
         def auth_help_content
           {
             title: "Authorize Toggl Track",
-            description: "MADCP uses your personal Toggl Track API token with HTTP Basic Auth " \
+            description: "MadCP uses your personal Toggl Track API token with HTTP Basic Auth " \
                          "(token as username and api_token as password), as documented by Toggl Engineering.",
             steps: [
               "Open Toggl Track Profile settings and copy your API token.",

@@ -24,7 +24,7 @@ module Madcp
         "layout",
         **locals.merge(
           content: content,
-          title: locals.fetch(:title, "MADCP"),
+          title: locals.fetch(:title, "MadCP"),
           year: Time.now.year,
         ),
       )

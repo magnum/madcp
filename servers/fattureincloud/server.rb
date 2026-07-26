@@ -37,15 +37,15 @@ module Madcp
           {
             title: "Authorize Fatture in Cloud",
             description: "The simplest option is the OAuth flow available in this form. " \
-                         "MADCP will open Fatture in Cloud and show the returned access token.",
+                         "MadCP will open Fatture in Cloud and show the returned access token.",
             steps: [
               "Configure FATTUREINCLOUD_CLIENT_ID and FATTUREINCLOUD_CLIENT_SECRET.",
               "Register the callback URL shown below in the Fatture in Cloud application.",
-              "Enter the MADCP operator credentials, then choose Retrieve OAuth token.",
+              "Enter the MadCP operator credentials, then choose Retrieve OAuth token.",
               "On the callback page, confirm the token was saved (or paste it once) and return here.",
             ],
             commands: [],
-            note: "MADCP stores the full OAuth token response (including refresh_token) under " \
+            note: "MadCP stores the full OAuth token response (including refresh_token) under " \
                   "data/fattureincloud/oauth_token.json. The default company ID is optional.",
           }
         end

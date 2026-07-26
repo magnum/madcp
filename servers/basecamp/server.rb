@@ -34,7 +34,7 @@ module Madcp
             steps: [
               "Sign in with the Basecamp CLI.",
               "Copy the current token without extra formatting.",
-              "List accounts and choose the numeric account ID MADCP should use.",
+              "List accounts and choose the numeric account ID MadCP should use.",
             ],
             commands: [
               { label: "Sign in", value: "basecamp auth login" },

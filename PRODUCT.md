@@ -6,7 +6,7 @@ product
 
 ## Users
 
-MADCP is used by its operator to configure integrations, inspect authentication
+MadCP is used by its operator to configure integrations, inspect authentication
 state, manage credentials, and obtain MCP endpoints for AI clients.
 
 ## Product Purpose

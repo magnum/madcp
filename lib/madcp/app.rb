@@ -168,7 +168,7 @@ module Madcp
         content_type :html
         renderer.page(
           "servers",
-          title: "MADCP integrations",
+          title: "MadCP integrations",
           integrations: registry.all,
           public_url: config.public_url,
           repo_url: "https://github.com/magnum/madcp",
