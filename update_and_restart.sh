@@ -9,7 +9,7 @@ echo "==> Pulling latest changes"
 git pull
 
 echo
-read -r -p "Edit .env with vim before restarting? [y/N] " answer
+read -r -p "Edit .env with vi before restarting? [y/N] " answer
 case "${answer}" in
   y|Y|yes|YES)
     if [[ ! -f .env ]]; then
@@ -21,7 +21,7 @@ case "${answer}" in
         exit 1
       fi
     fi
-    "${EDITOR:-vim}" .env
+    "${EDITOR:-vi}" .env
     ;;
   *)
     echo "==> Skipping .env edit"
