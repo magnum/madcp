@@ -56,6 +56,7 @@ module Madcp
               type: "password",
               required: false,
               help: "Paste an OAuth access token, or use Retrieve OAuth token below.",
+              env: "FATTUREINCLOUD_TOKEN",
             },
             {
               name: "fattureincloud_company_id",
@@ -63,6 +64,7 @@ module Madcp
               type: "text",
               required: false,
               help: "Used when a company-scoped tool omits company_id.",
+              env: "FATTUREINCLOUD_COMPANY_ID",
             },
           ]
         end
@@ -86,9 +88,10 @@ module Madcp
           company_id = params["fattureincloud_company_id"].to_s.strip
           old_token = ENV["FATTUREINCLOUD_TOKEN"]
           old_company_id = ENV["FATTUREINCLOUD_COMPANY_ID"]
-          updates = {}
-          updates["FATTUREINCLOUD_TOKEN"] = token unless token.empty?
-          updates["FATTUREINCLOUD_COMPANY_ID"] = company_id unless company_id.empty?
+          updates = {
+            "FATTUREINCLOUD_TOKEN" => token,
+            "FATTUREINCLOUD_COMPANY_ID" => company_id,
+          }
           persist_credentials!(updates)
           @client = Client.new
           return true if auth_status[:authenticated]

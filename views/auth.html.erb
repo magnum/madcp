@@ -88,9 +88,14 @@
     <% if integration.auth_fields.any? %>
       <div class="border-t border-stone-300 pt-8 dark:border-zinc-700">
         <h2 class="text-2xl font-bold">Integration credentials</h2>
+        <p class="mt-2 leading-7 text-stone-700 dark:text-zinc-300">
+          Fields are pre-filled from the current environment or stored credentials.
+          Leave them as-is to keep the values, edit to replace, or clear a field and save to remove it.
+        </p>
       </div>
     <% end %>
     <% integration.auth_fields.each do |field| %>
+      <% field_value = integration.auth_field_value(field) %>
       <div>
         <label class="mb-2 block font-semibold" for="<%= h field[:name] %>"><%= h field[:label] %></label>
         <% if field[:help] %>
@@ -101,12 +106,13 @@
                     id="<%= h field[:name] %>"
                     name="<%= h field[:name] %>"
                     spellcheck="false"
-                    <%= "required" if field[:required] %>></textarea>
+                    <%= "required" if field[:required] %>><%= h field_value %></textarea>
         <% else %>
           <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100"
                  id="<%= h field[:name] %>"
                  name="<%= h field[:name] %>"
                  type="<%= h field[:type] || "text" %>"
+                 value="<%= h field_value %>"
                  <%= "required" if field[:required] %>>
         <% end %>
       </div>

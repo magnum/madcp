@@ -50,6 +50,7 @@ module Madcp
             type: "password",
             required: false,
             help: "Paste the output of: hey auth token --quiet",
+            value: -> { current_hey_token },
           }]
         end
 
@@ -85,6 +86,14 @@ module Madcp
         end
 
         private
+
+        def current_hey_token
+          return "" unless auth_status[:authenticated]
+
+          @client.run(@client.auth_token, truncate: false).to_s.strip
+        rescue StandardError
+          ""
+        end
 
         def define_skill
           path = File.join(__dir__, "skills", "hey", "SKILL.md")

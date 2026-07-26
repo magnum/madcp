@@ -51,6 +51,7 @@ module Madcp
               type: "password",
               required: false,
               help: "Personal API token from Toggl Track profile settings.",
+              env: "TOGGLTRACK_TOKEN",
             },
             {
               name: "toggltrack_organization_id",
@@ -58,6 +59,7 @@ module Madcp
               type: "text",
               required: false,
               help: "Default organization used by organization-scoped tools.",
+              env: "TOGGLTRACK_ORGANIZATION_ID",
             },
             {
               name: "toggltrack_workspace_id",
@@ -65,6 +67,7 @@ module Madcp
               type: "text",
               required: false,
               help: "Default workspace used when a tool omits workspace_id.",
+              env: "TOGGLTRACK_WORKSPACE_ID",
             },
           ]
         end
@@ -95,10 +98,11 @@ module Madcp
           workspace_id = params["toggltrack_workspace_id"].to_s.strip
           old = credential_env_keys.to_h { |key| [key, ENV[key]] }
 
-          updates = {}
-          updates["TOGGLTRACK_TOKEN"] = token unless token.empty?
-          updates["TOGGLTRACK_ORGANIZATION_ID"] = organization_id unless organization_id.empty?
-          updates["TOGGLTRACK_WORKSPACE_ID"] = workspace_id unless workspace_id.empty?
+          updates = {
+            "TOGGLTRACK_TOKEN" => token,
+            "TOGGLTRACK_ORGANIZATION_ID" => organization_id,
+            "TOGGLTRACK_WORKSPACE_ID" => workspace_id,
+          }
           persist_credentials!(updates)
           @client = Client.new
           return true if auth_status[:authenticated]

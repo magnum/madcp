@@ -53,6 +53,7 @@ module Madcp
               type: "password",
               required: false,
               help: "Paste the output of: basecamp auth token --quiet",
+              env: "BASECAMP_TOKEN",
             },
             {
               name: "basecamp_account_id",
@@ -60,6 +61,7 @@ module Madcp
               type: "text",
               required: false,
               help: "The numeric account ID from your Basecamp URL or `basecamp accounts list`.",
+              env: "BASECAMP_ACCOUNT_ID",
             },
           ]
         end
@@ -85,9 +87,10 @@ module Madcp
           old_token = ENV["BASECAMP_TOKEN"]
           old_account = ENV["BASECAMP_ACCOUNT_ID"]
 
-          updates = {}
-          updates["BASECAMP_TOKEN"] = token unless token.empty?
-          updates["BASECAMP_ACCOUNT_ID"] = account_id unless account_id.empty?
+          updates = {
+            "BASECAMP_TOKEN" => token,
+            "BASECAMP_ACCOUNT_ID" => account_id,
+          }
           persist_credentials!(updates)
           @client = Client.new
           return true if auth_status[:authenticated]

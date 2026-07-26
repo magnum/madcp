@@ -65,6 +65,7 @@ module Madcp
               type: "textarea",
               required: false,
               help: "Preferred: gws auth export --unmasked (includes refresh_token).",
+              value: -> { File.file?(credentials_path) ? File.read(credentials_path) : "" },
             },
             {
               name: "googleworkspace_project_id",
@@ -72,6 +73,7 @@ module Madcp
               type: "text",
               required: false,
               help: "Recommended: explicitly sets the project used for quota, billing, and gws helpers.",
+              env: "GOOGLE_WORKSPACE_PROJECT_ID",
             },
             {
               name: "googleworkspace_token",
@@ -79,6 +81,7 @@ module Madcp
               type: "password",
               required: false,
               help: "Avoid in Docker. Overrides the credentials file and expires in ~1 hour.",
+              env: "GOOGLE_WORKSPACE_CLI_TOKEN",
             },
           ]
         end
@@ -120,8 +123,10 @@ module Madcp
           credentials_json = params["googleworkspace_credentials_json"].to_s.strip
           project_id = params["googleworkspace_project_id"].to_s.strip
 
-          updates = {}
-          updates["GOOGLE_WORKSPACE_PROJECT_ID"] = project_id unless project_id.empty?
+          updates = {
+            "GOOGLE_WORKSPACE_PROJECT_ID" => project_id,
+            "GOOGLE_WORKSPACE_CLI_TOKEN" => token,
+          }
           if !credentials_json.empty?
             begin
               parsed = JSON.parse(credentials_json)
@@ -137,8 +142,11 @@ module Madcp
             updates["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = credentials_path
             # Refresh-token file must win: a stale CLI_TOKEN shadows it and breaks all API calls.
             updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = nil
-          elsif !token.empty?
-            updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = token
+          else
+            File.delete(credentials_path) if File.file?(credentials_path)
+            plain = File.join(gws_config_dir, "credentials.json")
+            File.delete(plain) if File.file?(plain)
+            updates["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = nil
           end
           persist_credentials!(updates)
           @client = Client.new

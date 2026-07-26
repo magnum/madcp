@@ -149,6 +149,20 @@ module Madcp
     def oauth_call(callback_url:, state:) = raise(NotImplementedError)
     def oauth_exchange(callback_url:, params:) = raise(NotImplementedError)
 
+    # Current value for an auth form field. Prefer an explicit :value (string or
+    # callable), otherwise the ENV key named by :env.
+    def auth_field_value(field)
+      if field.key?(:value)
+        value = field[:value]
+        value = instance_exec(&value) if value.respond_to?(:call)
+        value.to_s
+      elsif field[:env]
+        ENV[field[:env]].to_s
+      else
+        ""
+      end
+    end
+
     protected
 
     def define_tool(name:, description:, properties: {}, required: [], write: false, &handler)

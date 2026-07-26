@@ -83,9 +83,41 @@ class AppTest < Minitest::Test
     assert_includes html, "gws auth export --unmasked"
     assert_includes html, "copyAuthCommand(this)"
     assert_includes html, "whitespace-nowrap"
+    assert_includes html, "pre-filled from the current environment"
     refute_includes html, "<pre"
     refute_match(/\btext-(?:xs|sm)\b/, html)
   ensure
+    integration.singleton_class.remove_method(:auth_status) if integration
+  end
+
+  def test_auth_form_prefills_env_backed_fields
+    integration = REGISTRY.fetch("googleworkspace")
+    integration.define_singleton_method(:auth_status) { { authenticated: false } }
+    old_project = ENV["GOOGLE_WORKSPACE_PROJECT_ID"]
+    ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = "madcp-prefill-project"
+
+    assert_equal "madcp-prefill-project", integration.auth_field_value(
+      integration.auth_fields.find { |field| field[:name] == "googleworkspace_project_id" },
+    )
+
+    html = RENDERER.page(
+      "auth",
+      title: integration.display_name,
+      integration: integration,
+      public_url: CONFIG.public_url,
+      repo_url: "https://github.com/magnum/madcp",
+      state: nil,
+      error: nil,
+      message: nil,
+    )
+
+    assert_includes html, 'value="madcp-prefill-project"'
+  ensure
+    if old_project
+      ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = old_project
+    else
+      ENV.delete("GOOGLE_WORKSPACE_PROJECT_ID")
+    end
     integration.singleton_class.remove_method(:auth_status) if integration
   end
 
