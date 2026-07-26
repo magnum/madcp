@@ -16,6 +16,9 @@ module Madcp
           limit: { type: "integer", description: "Maximum number of items" },
           fetch_all: { type: "boolean", description: "Fetch all pages instead of applying limit" },
         }.freeze
+        HEY_BULLET_LINE = /\A[[:blank:]]*[-–—*•][[:blank:]]+(.+?)\z/
+        HEY_NUMBERED_LINE = /\A[[:blank:]]*\d+[.)][[:blank:]]+(.+?)\z/
+        HEY_PARAGRAPH_SPACER = "<div><br></div>"
 
         def initialize(config:)
           @client = Client.new
@@ -25,8 +28,9 @@ module Madcp
         def instructions
           "Use HEY tools to read and manage email and personal productivity data. " \
             "Call hey_skill before complex workflows. " \
-            "For hey_compose / hey_reply prefer the paragraphs array (one idea per item); " \
-            "MadCP converts bodies to HTML so line breaks survive in HEY. " \
+            "For hey_compose / hey_reply prefer the paragraphs array (one idea per item, " \
+            "blank line between ideas). MadCP converts bodies to HTML with real paragraph " \
+            "spacing; lines starting with -, –, *, • or 1. become bullet/numbered lists. " \
             "Write tools are disabled unless allow_write_methods is enabled."
         end
 
@@ -92,7 +96,8 @@ module Madcp
         end
 
         # HEY/Action Text renders content as HTML: plain newlines collapse to spaces.
-        # Convert MCP plain text / paragraphs into simple Trix-friendly HTML.
+        # Convert MCP plain text / paragraphs into Trix-friendly HTML with paragraph gaps
+        # and real ul/ol lists (adjacent bare <div>s do not create blank lines in HEY).
         def format_hey_email_body(message: nil, paragraphs: nil)
           parts = hey_email_paragraphs(message: message, paragraphs: paragraphs)
           return "" if parts.empty?
@@ -100,7 +105,7 @@ module Madcp
           joined = parts.join("\n\n")
           return joined if hey_html_body?(joined)
 
-          parts.map { |part| "<div>#{hey_escape_with_breaks(part)}</div>" }.join
+          hey_plain_parts_to_html(parts)
         end
 
         private
@@ -116,6 +121,84 @@ module Madcp
 
           chunks = text.split(/\n[[:blank:]]*\n+/).map(&:strip).reject(&:empty?)
           chunks.empty? ? [text] : chunks
+        end
+
+        def hey_plain_parts_to_html(parts)
+          hey_coalesce_list_parts(parts).map { |part| hey_render_block(part) }.join(HEY_PARAGRAPH_SPACER)
+        end
+
+        # Adjacent paragraphs that are only list items become one list (no blank between bullets).
+        def hey_coalesce_list_parts(parts)
+          parts.each_with_object([]) do |part, coalesced|
+            if coalesced.any? &&
+               (kind = hey_list_only_kind(coalesced.last)) &&
+               kind == hey_list_only_kind(part)
+              coalesced[-1] = "#{coalesced.last}\n#{part}"
+            else
+              coalesced << part
+            end
+          end
+        end
+
+        def hey_list_only_kind(block)
+          lines = block.to_s.split("\n").map(&:rstrip).reject(&:empty?)
+          return nil if lines.empty?
+
+          kinds = lines.map { |line| hey_list_item(line)&.first }
+          return nil unless kinds.all? && kinds.uniq.size == 1
+
+          kinds.first
+        end
+
+        def hey_render_block(block)
+          lines = block.to_s.split("\n").map(&:rstrip)
+          html = +""
+          text_lines = []
+          list_kind = nil
+          list_items = []
+
+          flush_text = lambda do
+            next if text_lines.empty?
+
+            html << "<div>#{hey_escape_with_breaks(text_lines.join("\n"))}</div>"
+            text_lines = []
+          end
+
+          flush_list = lambda do
+            next if list_items.empty?
+
+            tag = list_kind == :ol ? "ol" : "ul"
+            items = list_items.map { |item| "<li>#{CGI.escapeHTML(item)}</li>" }.join
+            html << "<#{tag}>#{items}</#{tag}>"
+            list_items = []
+            list_kind = nil
+          end
+
+          lines.each do |line|
+            kind, content = hey_list_item(line)
+            if kind
+              flush_text.call
+              if list_kind && list_kind != kind
+                flush_list.call
+              end
+              list_kind = kind
+              list_items << content
+            else
+              flush_list.call
+              text_lines << line
+            end
+          end
+          flush_text.call
+          flush_list.call
+          html
+        end
+
+        def hey_list_item(line)
+          if (match = line.match(HEY_BULLET_LINE))
+            [:ul, match[1].strip]
+          elsif (match = line.match(HEY_NUMBERED_LINE))
+            [:ol, match[1].strip]
+          end
         end
 
         def normalize_hey_newlines(text)

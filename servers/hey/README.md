@@ -32,7 +32,7 @@ Credentials are stored via the HEY CLI config volume (`./data/cli/hey` in Docker
 
 About **30** tools (mailboxes, threads, compose/reply, calendars, todos, habits, journal, auth/config helpers). Mutations are `write: true` and gated by `HEY_ALLOW_WRITE`.
 
-For `hey_compose` / `hey_reply`, prefer the `paragraphs` array. MadCP converts plain text to simple HTML before calling the HEY CLI so line breaks are not collapsed by Action Text.
+For `hey_compose` / `hey_reply`, prefer the `paragraphs` array (one idea per item). MadCP converts plain text to Trix/Action Text HTML: blank lines between paragraphs, and lines starting with `-` / `–` / `*` / `•` or `1.` become real `<ul>` / `<ol>` lists.
 
 ## Files
 

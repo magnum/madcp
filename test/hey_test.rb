@@ -18,29 +18,28 @@ class HeyEmailBodyTest < Minitest::Test
     @integration = Madcp::Servers::Hey::Server.new(config: CONFIG)
   end
 
-  def test_paragraphs_become_html_divs
+  def test_paragraphs_become_html_divs_with_blank_spacers
     html = @integration.format_hey_email_body(
       paragraphs: [
         "Ciao Luca,",
         "Seconda idea.",
-        "1. Prima nota",
         "Antonio",
       ],
     )
 
     assert_equal(
-      "<div>Ciao Luca,</div><div>Seconda idea.</div><div>1. Prima nota</div><div>Antonio</div>",
+      "<div>Ciao Luca,</div><div><br></div><div>Seconda idea.</div><div><br></div><div>Antonio</div>",
       html,
     )
   end
 
-  def test_message_blank_lines_become_paragraphs
+  def test_message_blank_lines_become_paragraph_spacers
     html = @integration.format_hey_email_body(
       message: "Ciao Luca,\n\nSeconda idea.\n\nAntonio",
     )
 
     assert_equal(
-      "<div>Ciao Luca,</div><div>Seconda idea.</div><div>Antonio</div>",
+      "<div>Ciao Luca,</div><div><br></div><div>Seconda idea.</div><div><br></div><div>Antonio</div>",
       html,
     )
   end
@@ -51,6 +50,7 @@ class HeyEmailBodyTest < Minitest::Test
     )
 
     assert_includes html, "<div>Ciao Luca,</div>"
+    assert_includes html, "<div><br></div>"
     assert_includes html, "<div>Seconda idea.</div>"
     assert_includes html, "<div>Antonio</div>"
   end
@@ -61,6 +61,54 @@ class HeyEmailBodyTest < Minitest::Test
     )
 
     assert_equal "<div>Riga uno<br>Riga due</div>", html
+  end
+
+  def test_en_dash_bullets_become_ul
+    html = @integration.format_hey_email_body(
+      message: "Come lo salviamo:\n\n– Prima nota\n– Seconda nota\n\nFine.",
+    )
+
+    assert_equal(
+      "<div>Come lo salviamo:</div><div><br></div>" \
+      "<ul><li>Prima nota</li><li>Seconda nota</li></ul><div><br></div>" \
+      "<div>Fine.</div>",
+      html,
+    )
+  end
+
+  def test_adjacent_bullet_paragraphs_merge_into_one_list
+    html = @integration.format_hey_email_body(
+      paragraphs: [
+        "Intro",
+        "– Uno",
+        "- Due",
+        "* Tre",
+        "Chiusura",
+      ],
+    )
+
+    assert_equal(
+      "<div>Intro</div><div><br></div>" \
+      "<ul><li>Uno</li><li>Due</li><li>Tre</li></ul><div><br></div>" \
+      "<div>Chiusura</div>",
+      html,
+    )
+  end
+
+  def test_numbered_list_becomes_ol
+    html = @integration.format_hey_email_body(
+      paragraphs: ["1. Prima", "2. Seconda"],
+    )
+
+    assert_equal "<ol><li>Prima</li><li>Seconda</li></ol>", html
+  end
+
+  def test_mixed_intro_and_bullets_in_one_block
+    html = @integration.format_hey_email_body(
+      message: "Punti:\n– Alfa\n– Beta",
+    )
+
+    assert_equal "<div>Punti:</div><ul><li>Alfa</li><li>Beta</li></ul>", html
   end
 
   def test_html_bodies_are_passed_through
