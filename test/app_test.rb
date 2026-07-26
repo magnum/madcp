@@ -28,6 +28,23 @@ class AppTest < Minitest::Test
     assert_includes response["WWW-Authenticate"].to_s, "Basic"
   end
 
+  def test_layout_uses_shared_header_footer_partials
+    html = RENDERER.page(
+      "servers",
+      title: "MadCP integrations",
+      integrations: REGISTRY.all,
+      public_url: CONFIG.public_url,
+      repo_url: "https://github.com/magnum/madcp",
+    )
+
+    assert_includes html, 'id="theme-toggle"'
+    assert_includes html, 'href="/logout"'
+    assert_includes html, ">MadCP</a>"
+    assert_includes html, "Integrations"
+    refute_includes html, "text-7xl"
+    refute_includes html, "text-8xl"
+  end
+
   def test_logout_challenges_basic_auth_again
     response = @request.get("/logout", "HTTP_HOST" => "localhost")
     assert_equal 401, response.status

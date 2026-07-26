@@ -138,6 +138,41 @@ class TogglTrackTest < Minitest::Test
     end if original_start
   end
 
+  def test_client_redacts_api_token_fields_from_responses
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    response.define_singleton_method(:body) do
+      JSON.generate(
+        "id" => 1,
+        "api_token" => "personal-secret",
+        "workspaces" => [
+          { "id" => 99, "name" => "Main", "api_token" => "workspace-secret" },
+        ],
+      )
+    end
+    response.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+    fake_http = Object.new
+    fake_http.define_singleton_method(:request) { |_request| response }
+    client = Madcp::Servers::TogglTrack::Client.new(token: "secret-token")
+
+    original_start = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
+    body = client.get("/me").fetch(:body)
+
+    assert_equal "[REDACTED]", body.fetch("api_token")
+    assert_equal "[REDACTED]", body.dig("workspaces", 0, "api_token")
+    assert_equal "Main", body.dig("workspaces", 0, "name")
+    refute_includes JSON.generate(body), "personal-secret"
+    refute_includes JSON.generate(body), "workspace-secret"
+  ensure
+    Net::HTTP.define_singleton_method(:start) do |*args, **kwargs, &block|
+      original_start.call(*args, **kwargs, &block)
+    end if original_start
+  end
+
   def test_mcp_tool_call_preserves_toggl_integration_context
     registry_integration = REGISTRY.fetch("toggltrack")
     old_client = registry_integration.instance_variable_get(:@client)

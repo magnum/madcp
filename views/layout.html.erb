@@ -20,73 +20,11 @@
     </script>
   </head>
   <body class="min-h-screen bg-stone-50 text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-    <div class="mx-auto flex w-full max-w-6xl justify-end px-6 pt-6">
-      <button
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-stone-50 text-stone-950 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
-        id="theme-toggle"
-        type="button"
-        aria-label="Switch color theme">
-        <svg class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-        <svg class="hidden h-5 w-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </svg>
-      </button>
-    </div>
-    <main class="mx-auto w-full max-w-6xl px-6 pb-28 pt-8">
+    <%= partial("site_header") %>
+    <main class="mx-auto w-full max-w-6xl px-6 pb-28 pt-4">
       <%= content %>
     </main>
-    <footer class="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-stone-50/95 px-6 py-4 text-center text-stone-600 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 dark:text-zinc-400">
-      Copyright <%= year %> - Antonio Molinari ·
-      <a class="font-medium text-stone-950 underline decoration-stone-400 underline-offset-4 hover:decoration-stone-950 dark:text-zinc-100 dark:decoration-zinc-600 dark:hover:decoration-zinc-100"
-         href="<%= h repo_url %>"
-         target="_blank"
-         rel="noopener noreferrer">MadCP</a>
-      ·
-      <a class="font-medium text-stone-950 underline decoration-stone-400 underline-offset-4 hover:decoration-stone-950 dark:text-zinc-100 dark:decoration-zinc-600 dark:hover:decoration-zinc-100"
-         href="/logout"
-         title="HTTP Basic Auth has no server session; this asks the browser to forget credentials">Sign out</a>
-    </footer>
-    <script>
-      document.getElementById("theme-toggle").addEventListener("click", () => {
-        const isDark = document.documentElement.classList.toggle("dark");
-        try { localStorage.setItem("madcp-theme", isDark ? "dark" : "light"); } catch (_error) {}
-      });
-
-      async function copyAuthCommand(button) {
-        const source = button.closest("[data-command]").querySelector("code, textarea");
-        const command = source.value || source.textContent;
-        try {
-          await navigator.clipboard.writeText(command);
-        } catch (_error) {
-          const input = document.createElement("textarea");
-          input.value = command;
-          input.style.position = "fixed";
-          input.style.opacity = "0";
-          document.body.appendChild(input);
-          input.select();
-          document.execCommand("copy");
-          input.remove();
-        }
-
-        const copyIcon = button.querySelector("[data-copy-icon]");
-        const copiedIcon = button.querySelector("[data-copied-icon]");
-        if (copyIcon && copiedIcon) {
-          copyIcon.classList.add("hidden");
-          copiedIcon.classList.remove("hidden");
-          window.setTimeout(() => {
-            copiedIcon.classList.add("hidden");
-            copyIcon.classList.remove("hidden");
-          }, 1400);
-          return;
-        }
-
-        const original = button.textContent;
-        button.textContent = "Copied";
-        window.setTimeout(() => { button.textContent = original; }, 1400);
-      }
-    </script>
+    <%= partial("site_footer") %>
+    <%= partial("scripts") %>
   </body>
 </html>

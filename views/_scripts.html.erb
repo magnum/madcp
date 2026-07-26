@@ -1,0 +1,39 @@
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const isDark = document.documentElement.classList.toggle("dark");
+    try { localStorage.setItem("madcp-theme", isDark ? "dark" : "light"); } catch (_error) {}
+  });
+
+  async function copyAuthCommand(button) {
+    const source = button.closest("[data-command]").querySelector("code, textarea");
+    const command = source.value || source.textContent;
+    try {
+      await navigator.clipboard.writeText(command);
+    } catch (_error) {
+      const input = document.createElement("textarea");
+      input.value = command;
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+
+    const copyIcon = button.querySelector("[data-copy-icon]");
+    const copiedIcon = button.querySelector("[data-copied-icon]");
+    if (copyIcon && copiedIcon) {
+      copyIcon.classList.add("hidden");
+      copiedIcon.classList.remove("hidden");
+      window.setTimeout(() => {
+        copiedIcon.classList.add("hidden");
+        copyIcon.classList.remove("hidden");
+      }, 1400);
+      return;
+    }
+
+    const original = button.textContent;
+    button.textContent = "Copied";
+    window.setTimeout(() => { button.textContent = original; }, 1400);
+  }
+</script>

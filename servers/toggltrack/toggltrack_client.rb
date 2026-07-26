@@ -15,6 +15,8 @@ module Madcp
           x-toggl-quota-remaining x-toggl-quota-resets-in
           x-ratelimit-limit x-ratelimit-remaining x-ratelimit-reset retry-after
         ].freeze
+        # Toggl returns workspace/profile API tokens in cleartext; never forward them to MCP clients.
+        SENSITIVE_BODY_KEYS = %w[api_token].freeze
 
         class Error < StandardError; end
 
@@ -89,7 +91,7 @@ module Madcp
           {
             status: response.code.to_i,
             headers: response.each_header.to_h.slice(*SAFE_RESPONSE_HEADERS),
-            body: parsed,
+            body: redact_sensitive(parsed),
           }
         rescue JSON::ParserError
           {
@@ -97,6 +99,24 @@ module Madcp
             headers: response.each_header.to_h.slice(*SAFE_RESPONSE_HEADERS),
             body: output,
           }
+        end
+
+        def redact_sensitive(value)
+          case value
+          when Hash
+            value.each_with_object({}) do |(key, item), out|
+              out[key] =
+                if SENSITIVE_BODY_KEYS.include?(key.to_s)
+                  "[REDACTED]"
+                else
+                  redact_sensitive(item)
+                end
+            end
+          when Array
+            value.map { |item| redact_sensitive(item) }
+          else
+            value
+          end
         end
       end
     end

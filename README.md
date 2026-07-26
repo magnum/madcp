@@ -6,19 +6,19 @@ Use it as a Custom Connector from Claude Desktop, Claude on the web, Claude mobi
 
 ## Integrations
 
-| Folder | Upstream | Tools (approx.) |
-| --- | --- | ---: |
-| `servers/hey/` | [`basecamp/hey-cli`](https://github.com/basecamp/hey-cli) + `hey://skill` | 30 |
-| `servers/basecamp/` | [`basecamp/basecamp-cli`](https://github.com/basecamp/basecamp-cli) + `basecamp://skill` | 38 |
-| `servers/fattureincloud/` | [Fatture in Cloud API v2](https://developers.fattureincloud.it/) via `Net::HTTP` | 22 |
-| `servers/googleworkspace/` | [`googleworkspace/cli`](https://github.com/googleworkspace/cli) (`gws`) — Docs, Sheets, Drive + Discovery | 18 |
-| `servers/toggltrack/` | [Toggl Track API v9](https://engineering.toggl.com/docs/track/) | 22 |
+| Integration | Docs | Upstream | Tools (approx.) |
+| --- | --- | --- | ---: |
+| HEY | [README](servers/hey/README.md) | [`basecamp/hey-cli`](https://github.com/basecamp/hey-cli) | 30 |
+| Basecamp | [README](servers/basecamp/README.md) | [`basecamp/basecamp-cli`](https://github.com/basecamp/basecamp-cli) | 38 |
+| Fatture in Cloud | [README](servers/fattureincloud/README.md) | [API v2](https://developers.fattureincloud.it/) | 22 |
+| Google Workspace | [README](servers/googleworkspace/README.md) | [`googleworkspace/cli`](https://github.com/googleworkspace/cli) (`gws`) | 18 |
+| Toggl Track | [README](servers/toggltrack/README.md) | [API v9](https://engineering.toggl.com/docs/track/) | 22 |
 
-Roughly **130 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally).
+Roughly **130 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally). Setup, credentials, env vars, and tool notes for each server live in that server’s README.
 
 ## Server folders and Git submodules
 
-Every directory under `servers/` is shaped as a future **Git submodule**: one folder per integration, with a root `server.rb` that registers itself. MadCP discovers only `servers/*/server.rb` and does not require integration code inside `lib/`.
+Every directory under `servers/` is shaped as a future **Git submodule**: one folder per integration, with a root `server.rb` that registers itself (and its own `README.md`). MadCP discovers only `servers/*/server.rb` and does not require integration code inside `lib/`.
 
 **Today** those folders live as normal files in this repository so the project stays easy to clone and ship.
 
@@ -35,7 +35,10 @@ git submodule add <hey-server-repository> servers/hey
 madcp/
 ├── lib/madcp/                 # shared host (HTTP, OAuth, registry, DSL)
 ├── servers/<server_id>/       # one integration per folder (submodule-ready)
-├── views/                     # HTML UI
+│   ├── README.md
+│   ├── server.rb
+│   └── …
+├── views/                     # HTML UI (+ partials)
 ├── scripts/run-with-reload.sh # optional process restart on code change
 ├── update_and_restart.sh      # git pull → optional .env edit → compose up
 ├── data/                      # host bind-mount (gitignored)
@@ -59,6 +62,7 @@ For each `<server_id>`:
 - `POST /servers/<server_id>/tools/<tool>` — direct authenticated tool call (testing)
 - `POST /servers/<server_id>/mcp` — Streamable HTTP MCP endpoint
 - `GET /healthz` — health and auth status
+- `GET /logout` — Basic Auth sign-out challenge for the operator UI
 
 MCP client URLs look like:
 
@@ -79,7 +83,7 @@ MADCP_ALLOW_WRITE=false
 MADCP_MAX_CHARS=100000
 ```
 
-Enable writes globally or per integration:
+Enable writes globally or per integration (see each [server README](#integrations) for the flag name):
 
 ```dotenv
 HEY_ALLOW_WRITE=true
@@ -132,7 +136,7 @@ MADCP_AUTH_PASSWORD=change-me
 
 MCP protocol endpoints (`/mcp`, token/register/metadata) are **not** behind Basic Auth — they use MadCP OAuth / bearer tokens for Claude and other MCP clients.
 
-Because the browser is already authenticated with Basic Auth, integration auth forms no longer ask for a MadCP username/password.
+Because the browser is already authenticated with Basic Auth, integration auth forms no longer ask for a MadCP username/password. Use **Sign out** in the footer to challenge Basic Auth again (browser-dependent).
 
 ### MCP clients (Claude Custom Connectors)
 
@@ -144,30 +148,7 @@ If updating integration credentials fails while Claude is waiting, use **Continu
 
 Auth form fields are pre-filled from the current environment / stored credentials. Values loaded from `.env` / `credentials.env` are trimmed; placeholders like `# optional` are ignored.
 
-### Integration credentials
-
-- **HEY** — paste `hey auth token --quiet` into `/servers/hey/auth`
-- **Basecamp** — paste `basecamp auth token --quiet` and the account ID into `/servers/basecamp/auth`
-- **Fatture in Cloud** — configure `FATTUREINCLOUD_CLIENT_ID` / `FATTUREINCLOUD_CLIENT_SECRET`, register  
-  `${MADCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback`, then use **Retrieve OAuth token**.  
-  MadCP exchanges the code, can auto-save the access token, stores the full token JSON (including `refresh_token`) in `data/fattureincloud/oauth_token.json`, and offers a paste/save form on the callback page if auto-save fails. Default scopes are least-privilege read; override with `FATTUREINCLOUD_OAUTH_SCOPES`.
-- **Google Workspace** — paste `gws auth export --unmasked` JSON into `/servers/googleworkspace/auth`. Leave the short-lived access token empty: `GOOGLE_WORKSPACE_CLI_TOKEN` overrides the refresh-token file and expires quickly. Set `GOOGLE_WORKSPACE_PROJECT_ID` for quota attribution.
-- **Toggl Track** — personal API token + organization ID + workspace ID; Basic Auth as `token:api_token` against the v9 API.
-
-### Google Workspace tools
-
-Typed tools cover common Docs, Sheets, and Drive operations (Drive defaults to shared-drive-friendly flags). Also available:
-
-- `googleworkspace_discover` / `googleworkspace_schema`
-- `googleworkspace_api_read` — read-ish Discovery methods
-- `googleworkspace_api_call` — any Discovery method (`write: true`)
-
-`gws` is community-driven and builds its command tree from Google Discovery documents.
-
-```bash
-gws auth login
-gws auth export --unmasked > googleworkspace-credentials.json
-```
+Per-integration credential setup is documented in each server README linked [above](#integrations).
 
 ## Live code editing (Docker)
 
@@ -200,9 +181,3 @@ bundle exec ruby server.rb
 ```bash
 bundle exec ruby -Itest test/app_test.rb
 ```
-
-## References
-
-- [Fatture in Cloud authorization code flow](https://developers.fattureincloud.it/docs/authentication/code-flow/vanilla-code/)
-- [Fatture in Cloud API scopes](https://developers.fattureincloud.it/docs/basics/scopes/)
-- [Fatture in Cloud Ruby SDK](https://github.com/fattureincloud/fattureincloud-ruby-sdk)
