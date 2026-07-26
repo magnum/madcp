@@ -27,7 +27,7 @@
 
   <% auth_help = integration.auth_help_content %>
   <% if auth_help %>
-    <section class="mt-10 border-y border-stone-300 py-8 dark:border-zinc-700" aria-labelledby="auth-help-title">
+    <section class="mt-10 border-b border-stone-300 pb-8 dark:border-zinc-700" aria-labelledby="auth-help-title">
       <h2 class="text-2xl font-bold" id="auth-help-title"><%= h auth_help[:title] %></h2>
       <% if auth_help[:description] %>
         <p class="mt-3 max-w-2xl leading-7 text-stone-700 dark:text-zinc-300"><%= h auth_help[:description] %></p>
