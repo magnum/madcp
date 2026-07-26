@@ -8,7 +8,7 @@ module Madcp
           super(
             bin: ENV.fetch("BASECAMP_BIN", "basecamp"),
             timeout: ENV.fetch("BASECAMP_TIMEOUT", "30").to_i,
-            max_chars: ENV.fetch("BASECAMP_MAX_CHARS", "12000").to_i,
+            max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
             env: {
               "BASECAMP_TOKEN" => ENV.fetch("BASECAMP_TOKEN", ""),
               "BASECAMP_ACCOUNT_ID" => ENV.fetch("BASECAMP_ACCOUNT_ID", ""),

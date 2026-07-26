@@ -16,6 +16,28 @@ RUN git clone --depth 1 https://github.com/basecamp/hey-cli .
 RUN CGO_ENABLED=0 go build -trimpath -o /out/hey ./cmd/hey \
     || CGO_ENABLED=0 go build -trimpath -o /out/hey .
 
+FROM debian:bookworm-slim AS gws-download
+
+ARG TARGETARCH
+ARG GWS_VERSION=0.22.5
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp
+RUN case "${TARGETARCH}" in \
+      amd64) target="x86_64-unknown-linux-gnu" ;; \
+      arm64) target="aarch64-unknown-linux-gnu" ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && archive="google-workspace-cli-${target}.tar.gz" \
+    && url="https://github.com/googleworkspace/cli/releases/download/v${GWS_VERSION}" \
+    && curl -fsSLO "${url}/${archive}" \
+    && curl -fsSLO "${url}/${archive}.sha256" \
+    && sha256sum -c "${archive}.sha256" \
+    && tar -xzf "${archive}" \
+    && mkdir -p /out \
+    && install -m 0755 gws /out/gws
+
 FROM ruby:4.0.6-slim-bookworm
 
 RUN useradd --create-home --uid 10001 madcp \
@@ -25,6 +47,7 @@ RUN useradd --create-home --uid 10001 madcp \
 
 COPY --from=basecamp-build /out/basecamp /usr/local/bin/basecamp
 COPY --from=hey-build /out/hey /usr/local/bin/hey
+COPY --from=gws-download /out/gws /usr/local/bin/gws
 
 WORKDIR /app
 COPY Gemfile Gemfile.lock ./
@@ -44,6 +67,8 @@ RUN chmod +x /app/entrypoint.sh
 ENV HOME=/home/madcp \
     HEY_NO_KEYRING=1 \
     BASECAMP_NO_KEYRING=1 \
+    GOOGLE_WORKSPACE_CLI_CONFIG_DIR=/home/madcp/.config/gws \
+    GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file \
     MADCP_HOST=0.0.0.0 \
     MADCP_PORT=8765
 

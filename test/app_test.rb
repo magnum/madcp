@@ -26,7 +26,10 @@ class AppTest < Minitest::Test
 
     assert_equal 200, response.status
     payload = JSON.parse(response.body)
-    assert_equal %w[basecamp fattureincloud hey], payload.fetch("servers").map { |item| item.fetch("id") }
+    assert_equal(
+      %w[basecamp fattureincloud googleworkspace hey],
+      payload.fetch("servers").map { |item| item.fetch("id") },
+    )
   end
 
   def test_lists_tools_and_write_state

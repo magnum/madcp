@@ -8,7 +8,7 @@ module Madcp
           super(
             bin: ENV.fetch("HEY_BIN", "hey"),
             timeout: ENV.fetch("HEY_TIMEOUT", "30").to_i,
-            max_chars: ENV.fetch("HEY_MAX_CHARS", "12000").to_i,
+            max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
           )
         end
 

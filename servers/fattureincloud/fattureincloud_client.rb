@@ -19,7 +19,7 @@ module Madcp
         def initialize(
           token: ENV["FATTUREINCLOUD_TOKEN"],
           timeout: ENV.fetch("FATTUREINCLOUD_TIMEOUT", "30").to_i,
-          max_chars: ENV.fetch("FATTUREINCLOUD_MAX_CHARS", "12000").to_i
+          max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i
         )
           @token = token.to_s
           @timeout = timeout.positive? ? timeout : 30

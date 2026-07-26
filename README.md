@@ -13,6 +13,9 @@ The initial integrations are:
   the official [`basecamp/basecamp-cli`](https://github.com/basecamp/basecamp-cli)
 - `servers/fattureincloud/` — 22 tools for companies, archive documents, issued
   invoices, clients, and suppliers, using the v2 API directly through `Net::HTTP`
+- `servers/googleworkspace/` — typed Docs, Sheets, and Drive tools plus safe
+  dynamic access to every Google Workspace API exposed by
+  [`googleworkspace/cli`](https://github.com/googleworkspace/cli)
 
 The existing `hey-mcp` and `basecamp-mcp` repositories are not imported or
 modified. The two directories included here are self-contained prototypes that
@@ -36,6 +39,9 @@ madcp/
 │   ├── fattureincloud/
 │   │   ├── server.rb
 │   │   └── fattureincloud_client.rb
+│   ├── googleworkspace/
+│   │   ├── server.rb
+│   │   └── googleworkspace_client.rb
 │   └── hey/
 │       ├── server.rb
 │       └── hey_client.rb
@@ -105,6 +111,7 @@ The URL to configure in an MCP client is the MCP endpoint, for example:
 https://madcp.example.com/servers/hey/mcp
 https://madcp.example.com/servers/basecamp/mcp
 https://madcp.example.com/servers/fattureincloud/mcp
+https://madcp.example.com/servers/googleworkspace/mcp
 ```
 
 `/tools/<tool>` is a convenience API for testing and automation. MCP clients
@@ -117,6 +124,7 @@ All integrations are read-only by default:
 
 ```dotenv
 MADCP_ALLOW_WRITE=false
+MADCP_MAX_CHARS=100000
 ```
 
 Enable writes globally or override one integration:
@@ -125,10 +133,17 @@ Enable writes globally or override one integration:
 HEY_ALLOW_WRITE=true
 BASECAMP_ALLOW_WRITE=false
 FATTUREINCLOUD_ALLOW_WRITE=false
+GOOGLEWORKSPACE_ALLOW_WRITE=false
 ```
 
 The integration marks mutations with `write: true`. MADCP enforces the policy
 for both MCP calls and direct `/tools/<tool>` calls.
+
+`MADCP_MAX_CHARS` is the shared maximum text returned by any integration tool.
+It limits only the response passed to the MCP client; it does not change API
+pagination, request payloads, or upstream API quotas. The default of 100,000
+characters approximates Claude Code's default 25,000-token MCP output limit;
+the exact character-to-token ratio depends on the returned content.
 
 ## Docker quick start
 
@@ -147,11 +162,12 @@ MADCP_HOST_PORT=8877
 Open `http://localhost:8877/servers/` locally, or configure the public MCP URLs
 through your HTTPS tunnel/reverse proxy.
 
-The image builds both CLIs. Named volumes preserve:
+The image builds the Basecamp, HEY, and Google Workspace CLIs. Named volumes preserve:
 
 - MADCP-persisted integration values under `/app/data`;
 - Basecamp CLI configuration/cache;
-- HEY CLI configuration.
+- HEY CLI configuration;
+- Google Workspace CLI configuration and encrypted credentials.
 
 ## Authentication
 
@@ -163,6 +179,7 @@ own OAuth issuer:
 /servers/hey
 /servers/basecamp
 /servers/fattureincloud
+/servers/googleworkspace
 ```
 
 MADCP supports authorization code + PKCE, refresh tokens, token revocation,
@@ -179,6 +196,10 @@ Integration credentials are separate:
   `FATTUREINCLOUD_CLIENT_ID` and `FATTUREINCLOUD_CLIENT_SECRET` first. The
   redirect URI registered at Fatture in Cloud must exactly match
   `${MADCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback`.
+- Google Workspace: paste a short-lived access token or the JSON produced by
+  `gws auth export --unmasked` into `/servers/googleworkspace/auth`. For
+  unattended environments, an exported OAuth credential or service-account
+  JSON file is preferred over a short-lived token.
 
 External OAuth token retrieval is an integration capability, separate from the
 OAuth issuer MADCP exposes to MCP clients. Its launch always requires the MADCP
@@ -190,6 +211,36 @@ Fatture in Cloud defaults to the least-privilege scopes
 `entity.clients:r entity.suppliers:r issued_documents.invoices:r archive:r`.
 Override them with `FATTUREINCLOUD_OAUTH_SCOPES`. Write tools forward raw JSON
 objects and remain subject to MADCP's write gate.
+
+### Google Workspace tools
+
+Common Docs and Sheets editing operations have typed MCP tools. Drive file
+listing and metadata reads are also typed. The integration additionally exposes:
+
+- `googleworkspace_discover` and `googleworkspace_schema` for dynamic discovery;
+- `googleworkspace_api_read` for method names classified as read-only;
+- `googleworkspace_api_call` for any Discovery API method.
+
+`googleworkspace_api_call` and every typed mutation are marked `write: true`.
+This keeps the fully dynamic CLI surface available without allowing arbitrary
+mutations when `GOOGLEWORKSPACE_ALLOW_WRITE=false`. Before using another API,
+inspect its exact parameters with the schema tool.
+
+The `gws` CLI is community-driven and is not an officially supported Google
+product. It builds its command tree dynamically from Google Discovery documents,
+so newly published Workspace methods can be used without changing MADCP.
+
+Headless credential setup:
+
+```bash
+# Run on a machine with a browser and gws installed.
+gws auth login
+gws auth export --unmasked > googleworkspace-credentials.json
+```
+
+Paste that JSON into the integration auth form, or mount it in the container and
+set `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE`. A service-account JSON credential
+is also accepted where domain-wide delegation and API scopes are configured.
 
 References:
 

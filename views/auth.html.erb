@@ -42,11 +42,18 @@
         <% if field[:help] %>
           <pre class="mb-2 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-300"><%= h field[:help] %></pre>
         <% end %>
-        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-               id="<%= h field[:name] %>"
-               name="<%= h field[:name] %>"
-               type="<%= h field[:type] || "text" %>"
-               <%= "required" if field[:required] %>>
+        <% if field[:type] == "textarea" %>
+          <textarea class="h-40 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs"
+                    id="<%= h field[:name] %>"
+                    name="<%= h field[:name] %>"
+                    <%= "required" if field[:required] %>></textarea>
+        <% else %>
+          <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
+                 id="<%= h field[:name] %>"
+                 name="<%= h field[:name] %>"
+                 type="<%= h field[:type] || "text" %>"
+                 <%= "required" if field[:required] %>>
+        <% end %>
       </div>
     <% end %>
 
