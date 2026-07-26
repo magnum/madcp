@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
+require "base64"
+require "digest"
 require "json"
+require "openssl"
 require "securerandom"
 require "sinatra/base"
 require "uri"
@@ -73,6 +76,37 @@ module Madcp
         headers["WWW-Authenticate"] =
           %(Bearer error="invalid_token", resource_metadata="#{metadata}")
         halt 401, json({ error: "invalid_token", error_description: "Authentication required" }, 401)
+      end
+
+      def operator_ui_request?
+        path = request.path_info
+        return true if path == "/" || path == "/servers" || path == "/servers/"
+        return true if path.match?(%r{\A/servers/[^/]+/oauth(_callback)?\z})
+        return false unless path.match?(%r{\A/servers/[^/]+/auth(?:/|\z)})
+
+        !path.match?(%r{/auth/(register|token|revoke|authorize)\z})
+      end
+
+      def require_operator_basic_auth!
+        header = request.env["HTTP_AUTHORIZATION"].to_s
+        if header.start_with?("Basic ")
+          decoded = Base64.decode64(header.delete_prefix("Basic ")).force_encoding("UTF-8")
+          username, password = decoded.split(":", 2)
+          if secure_basic_equals(username, config.auth_username) &&
+             secure_basic_equals(password, config.auth_password)
+            return
+          end
+        end
+
+        headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
+        halt 401, "Authentication required"
+      end
+
+      def secure_basic_equals(a, b)
+        OpenSSL.fixed_length_secure_compare(
+          Digest::SHA256.digest(a.to_s),
+          Digest::SHA256.digest(b.to_s),
+        )
       end
 
       def verify_transport!
@@ -152,6 +186,7 @@ module Madcp
     end
 
     before do
+      require_operator_basic_auth! if operator_ui_request?
       verify_transport! if request.path_info.include?("/mcp") ||
                            request.path_info.match?(%r{/servers/[^/]+/tools/})
     end
@@ -259,7 +294,6 @@ module Madcp
     end
 
     post "/servers/:server_id/auth/credentials" do
-      provider.verify_operator!(params["username"], params["password"])
       integration.apply_credentials(params)
       content_type :html
       renderer.page(
@@ -271,8 +305,6 @@ module Madcp
           message: "Credentials updated.",
         ),
       )
-    rescue OAuthProvider::OAuthError => e
-      oauth_error(e)
     rescue StandardError => e
       status 400
       content_type :html
@@ -284,7 +316,6 @@ module Madcp
 
     post "/servers/:server_id/oauth" do
       require_oauth_token_retrieval!
-      provider.verify_operator!(params["username"], params["password"])
       state = SecureRandom.urlsafe_base64(32)
       oauth_retrieval_mutex.synchronize do
         oauth_retrieval_states.delete_if { |_, data| data[:expires_at] < Time.now.to_i }
@@ -298,8 +329,6 @@ module Madcp
       raise "integration did not return an authorization_url" if authorization_url.to_s.empty?
 
       redirect authorization_url, 302
-    rescue OAuthProvider::OAuthError => e
-      oauth_error(e)
     rescue StandardError => e
       halt 400, json({ error: e.message }, 400)
     end
@@ -359,7 +388,6 @@ module Madcp
 
     post "/servers/:server_id/auth/save_oauth_token" do
       require_oauth_token_retrieval!
-      provider.verify_operator!(params["username"], params["password"])
       if integration.respond_to?(:apply_oauth_token_paste!)
         integration.apply_oauth_token_paste!(
           access_token: params["access_token"],
@@ -371,8 +399,6 @@ module Madcp
         )
       end
       redirect "/servers/#{integration.id}/auth", 302
-    rescue OAuthProvider::OAuthError => e
-      oauth_error(e)
     rescue StandardError => e
       status 400
       content_type :html
@@ -397,13 +423,8 @@ module Madcp
 
     post "/servers/:server_id/auth/callback" do
       state = params["state"].to_s
-      provider.verify_operator!(params["username"], params["password"])
       integration.apply_credentials(params)
-      redirect provider.authorize_login(
-        username: params["username"],
-        password: params["password"],
-        state: state,
-      ), 302
+      redirect provider.authorize_login(state: state), 302
     rescue OAuthProvider::OAuthError => e
       oauth_error(e)
     rescue StandardError => e
@@ -425,12 +446,7 @@ module Madcp
       state = params["state"].to_s
       halt 400, json({ error: "missing OAuth state" }, 400) if state.empty?
 
-      provider.verify_operator!(params["username"], params["password"])
-      redirect provider.authorize_login(
-        username: params["username"],
-        password: params["password"],
-        state: state,
-      ), 302
+      redirect provider.authorize_login(state: state), 302
     rescue OAuthProvider::OAuthError => e
       oauth_error(e)
     end
@@ -461,7 +477,6 @@ module Madcp
     end
 
     post "/servers/:server_id/auth/logout" do
-      provider.verify_operator!(params["username"], params["password"])
       count = provider.revoke_all!
       integration.clear_credentials! if params["clear_integration"] == "1"
       content_type :html
@@ -472,13 +487,6 @@ module Madcp
           error: nil,
           message: "Revoked #{count} OAuth token(s).",
         ),
-      )
-    rescue OAuthProvider::OAuthError => e
-      status e.status
-      content_type :html
-      renderer.page(
-        "logout",
-        **integration_locals(integration, error: e.message, message: nil),
       )
     end
   end

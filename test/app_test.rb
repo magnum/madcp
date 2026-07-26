@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
-ENV["MADCP_OAUTH_USERNAME"] = "admin"
-ENV["MADCP_OAUTH_PASSWORD"] = "secret"
+ENV["MADCP_AUTH_USERNAME"] = "admin"
+ENV["MADCP_AUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
 
+require "base64"
 require "minitest/autorun"
 require "rack/mock"
 require "uri"
@@ -17,11 +18,20 @@ class AppTest < Minitest::Test
     @request = Rack::MockRequest.new(APP)
   end
 
+  def basic_auth(username = "admin", password = "secret")
+    { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
+  end
+
+  def test_operator_ui_requires_basic_auth
+    response = @request.get("/servers/", "HTTP_HOST" => "localhost")
+    assert_equal 401, response.status
+    assert_includes response["WWW-Authenticate"].to_s, "Basic"
+  end
+
   def test_lists_discovered_integrations
     response = @request.get(
       "/servers/?format=json",
-      "HTTP_HOST" => "localhost",
-      "HTTP_ACCEPT" => "application/json",
+      { "HTTP_HOST" => "localhost", "HTTP_ACCEPT" => "application/json" }.merge(basic_auth),
     )
 
     assert_equal 200, response.status
@@ -117,13 +127,11 @@ class AppTest < Minitest::Test
 
     response = @request.post(
       "/servers/hey/auth/continue",
-      "HTTP_HOST" => "localhost",
-      "CONTENT_TYPE" => "application/x-www-form-urlencoded",
-      input: URI.encode_www_form(
-        username: "admin",
-        password: "secret",
-        state: login_state,
-      ),
+      {
+        "HTTP_HOST" => "localhost",
+        "CONTENT_TYPE" => "application/x-www-form-urlencoded",
+        input: URI.encode_www_form(state: login_state),
+      }.merge(basic_auth),
     )
 
     assert_equal 302, response.status
@@ -331,11 +339,7 @@ class AppTest < Minitest::Test
       "state" => "client-state",
     )
     login_state = URI.decode_www_form(URI(login_url).query).to_h.fetch("state")
-    callback_url = provider.authorize_login(
-      username: "admin",
-      password: "secret",
-      state: login_state,
-    )
+    callback_url = provider.authorize_login(state: login_state)
     callback = URI.decode_www_form(URI(callback_url).query).to_h
 
     assert_equal "client-state", callback.fetch("state")
@@ -369,11 +373,7 @@ class AppTest < Minitest::Test
         "state" => "persist-me",
       )
       login_state = URI.decode_www_form(URI(login_url).query).to_h.fetch("state")
-      callback_url = provider.authorize_login(
-        username: "admin",
-        password: "secret",
-        state: login_state,
-      )
+      callback_url = provider.authorize_login(state: login_state)
       code = URI.decode_www_form(URI(callback_url).query).to_h.fetch("code")
       tokens = provider.token_request(
         "grant_type" => "authorization_code",

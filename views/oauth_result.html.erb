@@ -53,16 +53,6 @@
             method="post"
             action="/servers/<%= h integration.id %>/auth/save_oauth_token">
         <div>
-          <label class="mb-2 block font-semibold" for="username">MadCP username</label>
-          <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-                 id="username" name="username" autocomplete="username" required>
-        </div>
-        <div>
-          <label class="mb-2 block font-semibold" for="password">MadCP password</label>
-          <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-                 id="password" name="password" type="password" autocomplete="current-password" required>
-        </div>
-        <div>
           <label class="mb-2 block font-semibold" for="access_token">Access token</label>
           <textarea class="h-28 w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 font-mono text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
                     id="access_token"

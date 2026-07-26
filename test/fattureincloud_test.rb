@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
-ENV["MADCP_OAUTH_USERNAME"] = "admin"
-ENV["MADCP_OAUTH_PASSWORD"] = "secret"
+ENV["MADCP_AUTH_USERNAME"] = "admin"
+ENV["MADCP_AUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
 
+require "base64"
 require "minitest/autorun"
 require "rack/mock"
 require "tmpdir"
@@ -277,14 +278,14 @@ class OAuthTokenRetrievalTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_launch_requires_operator_credentials
+  def test_launch_requires_basic_auth
     response = @request.post(
       "/servers/fake-oauth/oauth",
       "HTTP_HOST" => "localhost",
-      params: { username: "admin", password: "wrong" },
     )
 
     assert_equal 401, response.status
+    assert_includes response["WWW-Authenticate"].to_s, "Basic"
     assert_nil response["location"]
   end
 
@@ -298,9 +299,11 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
     callback = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc", scope: %w[one two], client_secret: "query-secret")}",
-      "HTTP_HOST" => "localhost",
-      "HTTP_COOKIE" => "private=cookie",
-      "HTTP_X_PRIVATE" => "do-not-echo",
+      {
+        "HTTP_HOST" => "localhost",
+        "HTTP_COOKIE" => "private=cookie",
+        "HTTP_X_PRIVATE" => "do-not-echo",
+      }.merge(basic_auth),
     )
 
     assert_equal 200, callback.status
@@ -318,7 +321,7 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
     reused = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "again")}",
-      "HTTP_HOST" => "localhost",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
     )
     assert_equal 400, reused.status
     assert_includes reused["content-type"], "application/json"
@@ -328,7 +331,7 @@ class OAuthTokenRetrievalTest < Minitest::Test
   def test_invalid_and_expired_state_are_rejected
     invalid = @request.get(
       "/servers/fake-oauth/oauth_callback?state=not-valid&code=abc",
-      "HTTP_HOST" => "localhost",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
     )
     assert_equal 400, invalid.status
     assert_includes invalid["content-type"], "application/json"
@@ -338,18 +341,21 @@ class OAuthTokenRetrievalTest < Minitest::Test
     @app.settings.oauth_retrieval_states.fetch(state)[:expires_at] = Time.now.to_i - 1
     expired = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc")}",
-      "HTTP_HOST" => "localhost",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
     )
     assert_equal 400, expired.status
   end
 
   private
 
+  def basic_auth(username = "admin", password = "secret")
+    { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
+  end
+
   def launch_oauth
     response = @request.post(
       "/servers/fake-oauth/oauth",
-      "HTTP_HOST" => "localhost",
-      params: { username: "admin", password: "secret" },
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
     )
     assert_equal 302, response.status
     response

@@ -14,17 +14,9 @@
   <% end %>
 
   <form class="mt-10 space-y-6" method="post">
-    <p class="leading-7 text-stone-700 dark:text-zinc-300">Confirm the MadCP operator credentials before revoking sessions.</p>
-    <div>
-      <label class="mb-2 block font-semibold" for="username">MadCP username</label>
-      <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100"
-             id="username" name="username" autocomplete="username" required>
-    </div>
-    <div>
-      <label class="mb-2 block font-semibold" for="password">MadCP password</label>
-      <input class="w-full rounded-lg border border-stone-400 bg-stone-50 px-4 py-3 text-stone-950 focus:border-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-950/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100"
-             id="password" name="password" type="password" autocomplete="current-password" required>
-    </div>
+    <p class="leading-7 text-stone-700 dark:text-zinc-300">
+      You are signed in with MadCP HTTP Basic Auth. Confirm to revoke MCP client OAuth sessions for this integration.
+    </p>
     <label class="flex items-start gap-3 rounded-lg border border-stone-300 bg-stone-100 p-4 dark:border-zinc-700 dark:bg-zinc-900">
       <input class="mt-1 h-5 w-5 accent-stone-950 dark:accent-zinc-100" type="checkbox" name="clear_integration" value="1">
       <span>

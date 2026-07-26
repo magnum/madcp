@@ -3,17 +3,26 @@
 module Madcp
   class Config
     attr_reader :root, :host, :port, :public_url, :allowed_hosts, :allowed_origins,
-                :oauth_username, :oauth_password, :static_bearer, :allow_write_methods
+                :auth_username, :auth_password, :static_bearer, :allow_write_methods
 
     def initialize(root:)
       @root = root
       @host = ENV.fetch("MADCP_HOST", "0.0.0.0")
       @port = ENV.fetch("MADCP_PORT", "8765").to_i
       @public_url = ENV.fetch("MADCP_PUBLIC_URL", "").sub(%r{/+\z}, "")
-      @oauth_username = ENV.fetch("MADCP_OAUTH_USERNAME", "admin")
-      @static_bearer = ENV.fetch("MADCP_AUTH_TOKEN", "")
-      @oauth_password = ENV.fetch("MADCP_OAUTH_PASSWORD", "")
-      @oauth_password = @static_bearer if @oauth_password.empty?
+      @static_bearer = Madcp.sanitize_env_value(ENV.fetch("MADCP_AUTH_TOKEN", ""))
+      @auth_username = Madcp.sanitize_env_value(
+        ENV.fetch("MADCP_AUTH_USERNAME") do
+          ENV.fetch("MADCP_OAUTH_USERNAME", "admin")
+        end,
+      )
+      @auth_username = "admin" if @auth_username.empty?
+      @auth_password = Madcp.sanitize_env_value(
+        ENV.fetch("MADCP_AUTH_PASSWORD") do
+          ENV.fetch("MADCP_OAUTH_PASSWORD", "")
+        end,
+      )
+      @auth_password = @static_bearer if @auth_password.empty?
       global_write = ENV.fetch(
         "MADCP_ALLOW_WRITE",
         ENV.fetch("MADCP_ALLOW_WRITE_METHODS", "false"),
@@ -28,7 +37,7 @@ module Madcp
 
     def validate!
       raise "MADCP_PUBLIC_URL is required" if @public_url.empty?
-      raise "MADCP_OAUTH_PASSWORD or MADCP_AUTH_TOKEN is required" if @oauth_password.empty?
+      raise "MADCP_AUTH_PASSWORD or MADCP_AUTH_TOKEN is required" if @auth_password.empty?
     end
 
     def data_dir(server_id)

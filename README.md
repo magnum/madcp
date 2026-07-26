@@ -95,7 +95,7 @@ TOGGLTRACK_ALLOW_WRITE=false
 
 ```bash
 cp .env.example .env
-# Edit MADCP_PUBLIC_URL, operator password, allowed hosts/origins, write flags.
+# Edit MADCP_PUBLIC_URL, MADCP_AUTH_USERNAME/PASSWORD, allowed hosts/origins, write flags.
 docker compose up --build -d
 # or, on the host after changes:
 ./update_and_restart.sh
@@ -121,9 +121,22 @@ The image builds the Basecamp, HEY, and Google Workspace CLIs.
 
 ## Authentication
 
-### MadCP operator + MCP clients (Claude Custom Connectors)
+### Operator UI (HTTP Basic Auth)
 
-`MADCP_OAUTH_USERNAME` / `MADCP_OAUTH_PASSWORD` protect auth forms. Each integration is its own OAuth issuer (`/servers/<id>`). MadCP supports authorization code + PKCE, refresh tokens, revocation, dynamic client registration, protected-resource metadata, and an optional static `MADCP_AUTH_TOKEN`.
+HTML operator pages (`/servers/`, `/auth`, OAuth callback UI, logout) require HTTP Basic Auth:
+
+```dotenv
+MADCP_AUTH_USERNAME=admin
+MADCP_AUTH_PASSWORD=change-me
+```
+
+MCP protocol endpoints (`/mcp`, token/register/metadata) are **not** behind Basic Auth — they use MadCP OAuth / bearer tokens for Claude and other MCP clients.
+
+Because the browser is already authenticated with Basic Auth, integration auth forms no longer ask for a MadCP username/password.
+
+### MCP clients (Claude Custom Connectors)
+
+Each integration is its own OAuth issuer (`/servers/<id>`). MadCP supports authorization code + PKCE, refresh tokens, revocation, dynamic client registration, protected-resource metadata, and an optional static `MADCP_AUTH_TOKEN`.
 
 MCP OAuth clients and tokens are persisted under `data/_oauth/<server_id>.json`, so restarting the container does not force Claude to re-authenticate. Short-lived auth codes and login states stay in memory.
 

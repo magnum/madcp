@@ -133,8 +133,9 @@ module Madcp
       @mutex.synchronize { @states.key?(state) }
     end
 
-    def authorize_login(username:, password:, state:)
-      verify_operator!(username, password)
+    # Completes the MCP client authorization code flow. Caller must already have
+    # authenticated the operator (HTTP Basic Auth on the UI).
+    def authorize_login(state:)
       state_data = @mutex.synchronize { @states.delete(state) }
       raise OAuthError.new(400, "invalid_request", "invalid state") unless state_data
 
@@ -143,7 +144,7 @@ module Madcp
         @auth_codes[code] = state_data.merge(
           code: code,
           expires_at: Time.now.to_i + AUTH_CODE_TTL,
-          subject: username,
+          subject: @config.auth_username,
         )
       end
       values = { code: code }
@@ -196,14 +197,6 @@ module Madcp
         persist_store!
         count
       end
-    end
-
-    def verify_operator!(username, password)
-      unless secure_equals(username, @config.oauth_username) &&
-             secure_equals(password, @config.oauth_password)
-        raise OAuthError.new(401, "access_denied", "invalid operator credentials")
-      end
-      true
     end
 
     private

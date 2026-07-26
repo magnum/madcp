@@ -41,7 +41,7 @@ module Madcp
             steps: [
               "Configure FATTUREINCLOUD_CLIENT_ID and FATTUREINCLOUD_CLIENT_SECRET.",
               "Register the callback URL shown below in the Fatture in Cloud application.",
-              "Enter the MadCP operator credentials, then choose Retrieve OAuth token.",
+              "Choose Retrieve OAuth token (you are already signed in with MadCP Basic Auth).",
               "On the callback page, confirm the token was saved (or paste it once) and return here.",
             ],
             commands: [],
