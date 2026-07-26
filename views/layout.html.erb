@@ -61,6 +61,19 @@
           document.execCommand("copy");
           input.remove();
         }
+
+        const copyIcon = button.querySelector("[data-copy-icon]");
+        const copiedIcon = button.querySelector("[data-copied-icon]");
+        if (copyIcon && copiedIcon) {
+          copyIcon.classList.add("hidden");
+          copiedIcon.classList.remove("hidden");
+          window.setTimeout(() => {
+            copiedIcon.classList.add("hidden");
+            copyIcon.classList.remove("hidden");
+          }, 1400);
+          return;
+        }
+
         const original = button.textContent;
         button.textContent = "Copied";
         window.setTimeout(() => { button.textContent = original; }, 1400);

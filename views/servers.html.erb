@@ -1,4 +1,4 @@
-<header class="mb-12 border-b border-stone-300 pb-10 dark:border-zinc-700">
+<header class="mb-10 pb-2">
   <p class="mb-3 font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-zinc-400">Multi-adapter MCP</p>
   <h1 class="text-5xl font-bold tracking-tight">Integrations</h1>
   <p class="mt-4 max-w-3xl text-lg leading-8 text-stone-700 dark:text-zinc-300">
@@ -6,7 +6,7 @@
   </p>
 </header>
 
-<div class="divide-y divide-stone-300 border-y border-stone-300 dark:divide-zinc-700 dark:border-zinc-700">
+<div class="divide-y divide-stone-300 border-t border-b border-stone-300 dark:divide-zinc-700 dark:border-zinc-700">
   <% integrations.each do |item| %>
     <% status = item.auth_status %>
     <article class="py-9">
@@ -33,9 +33,24 @@
             </div>
           </dl>
 
-          <div class="mt-7 rounded-lg bg-stone-100 p-4 dark:bg-zinc-900">
+          <div class="mt-7 rounded-lg bg-stone-100 p-4 dark:bg-zinc-900" data-command>
             <p class="font-semibold text-stone-500 dark:text-zinc-400">MCP endpoint</p>
-            <code class="mt-2 block overflow-x-auto whitespace-nowrap font-mono"><%= h "#{public_url}/servers/#{item.id}/mcp" %></code>
+            <div class="mt-2 flex min-w-0 items-center gap-3">
+              <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono"><%= h "#{public_url}/servers/#{item.id}/mcp" %></code>
+              <button
+                class="inline-flex shrink-0 items-center justify-center rounded-md border border-stone-400 bg-stone-50 p-2 hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-950 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:focus:ring-zinc-100"
+                type="button"
+                aria-label="Copy MCP endpoint"
+                title="Copy MCP endpoint"
+                onclick="copyAuthCommand(this)">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-copy-icon>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                </svg>
+                <svg class="hidden h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-copied-icon>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
