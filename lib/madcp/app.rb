@@ -80,6 +80,7 @@ module Madcp
 
       def operator_ui_request?
         path = request.path_info
+        return false if path == "/logout"
         return true if path == "/" || path == "/servers" || path == "/servers/"
         return true if path.match?(%r{\A/servers/[^/]+/oauth(_callback)?\z})
         return false unless path.match?(%r{\A/servers/[^/]+/auth(?:/|\z)})
@@ -193,6 +194,27 @@ module Madcp
 
     get "/" do
       redirect "/servers/", 302
+    end
+
+    # HTTP Basic Auth has no real server-side session. Returning 401 with a
+    # WWW-Authenticate challenge is the usual way to make the browser forget
+    # cached credentials (cancel the dialog = signed out; submit = sign in again).
+    get "/logout" do
+      headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
+      headers["Cache-Control"] = "no-store"
+      content_type :html
+      status 401
+      <<~HTML
+        <!doctype html>
+        <html lang="en">
+          <head><meta charset="utf-8"><title>MadCP signed out</title></head>
+          <body>
+            <p>Signed out of the MadCP operator UI.</p>
+            <p>Cancel the browser login dialog to stay signed out, or enter your credentials again to continue.</p>
+            <p><a href="/servers/">Back to integrations</a></p>
+          </body>
+        </html>
+      HTML
     end
 
     get ["/servers", "/servers/"] do

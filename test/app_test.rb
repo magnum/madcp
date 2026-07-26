@@ -28,6 +28,13 @@ class AppTest < Minitest::Test
     assert_includes response["WWW-Authenticate"].to_s, "Basic"
   end
 
+  def test_logout_challenges_basic_auth_again
+    response = @request.get("/logout", "HTTP_HOST" => "localhost")
+    assert_equal 401, response.status
+    assert_includes response["WWW-Authenticate"].to_s, 'Basic realm="MadCP"'
+    assert_includes response.body, "Signed out"
+  end
+
   def test_lists_discovered_integrations
     response = @request.get(
       "/servers/?format=json",
