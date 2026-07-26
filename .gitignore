@@ -3,3 +3,4 @@
 /.ruby-lsp/
 /data/
 /vendor/
+/docker-compose.override.yml

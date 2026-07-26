@@ -270,11 +270,39 @@ References:
 - [Ruby SDK reference](https://github.com/fattureincloud/fattureincloud-ruby-sdk)
 
 MCP OAuth clients, access tokens, and refresh tokens are persisted under
-`data/_oauth/<server_id>.json` (mounted via the `madcp-data` volume in Docker).
-Restarting MADCP keeps Claude Custom Connector sessions valid. Short-lived
-authorization codes and login states stay in memory. A shared multi-instance
-OAuth store is still a future production requirement if you run more than one
-MADCP replica.
+`data/_oauth/<server_id>.json` (under the host `./data` bind mount). Restarting
+MADCP keeps Claude Custom Connector sessions valid. Short-lived authorization
+codes and login states stay in memory. A shared multi-instance OAuth store is
+still a future production requirement if you run more than one MADCP replica.
+
+## Live code editing (Docker)
+
+Mounting `servers/` as a volume is worth it while you iterate on integrations.
+True in-process Ruby class reloading is not: tools, the registry, and OAuth
+providers are built once at boot. Restart the process instead.
+
+```bash
+cp docker-compose.override.example.yml docker-compose.override.yml
+docker compose up -d --build
+```
+
+The override bind-mounts `servers/`, `lib/`, `views/`, and the entry scripts,
+then runs `scripts/run-with-reload.sh`.
+
+Reload options:
+
+```bash
+# Explicit (always works)
+touch data/restart.txt
+
+# Automatic: MADCP_AUTO_RELOAD=1 in the override polls .rb/.erb under
+# servers/, lib/, and views/ and restarts the Ruby process on change.
+```
+
+Still rebuild the image when `Dockerfile`, `Gemfile`, or CLI binaries change.
+
+`docker-compose.override.yml` is gitignored so production hosts can keep the
+plain `docker-compose.yml` (image-baked code + `./data` only).
 
 ## Local development
 
@@ -285,6 +313,8 @@ bundle install
 cp .env.example .env
 set -a; . ./.env; set +a
 bundle exec ruby server.rb
+# or, with the same restart marker / auto-reload behavior:
+# MADCP_ROOT=. MADCP_AUTO_RELOAD=1 ./scripts/run-with-reload.sh
 ```
 
 Run checks:

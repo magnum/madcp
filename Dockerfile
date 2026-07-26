@@ -61,8 +61,9 @@ RUN gem install bundler --no-document \
 COPY lib ./lib
 COPY servers ./servers
 COPY views ./views
+COPY scripts ./scripts
 COPY server.rb config.ru entrypoint.sh ./
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/scripts/run-with-reload.sh
 
 ENV HOME=/home/madcp \
     HEY_NO_KEYRING=1 \

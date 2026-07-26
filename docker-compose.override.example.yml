@@ -1,0 +1,23 @@
+# Copy to docker-compose.override.yml for live editing without image rebuilds:
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   docker compose up -d --build
+#
+# Compose merges this file automatically with docker-compose.yml.
+#
+# Reload after edits:
+#   touch data/restart.txt
+# or rely on MADCP_AUTO_RELOAD (polls servers/lib/views every second).
+
+services:
+  madcp:
+    environment:
+      MADCP_AUTO_RELOAD: "1"
+      MADCP_RESTART_MARKER: /app/data/restart.txt
+    volumes:
+      - ./servers:/app/servers
+      - ./lib:/app/lib
+      - ./views:/app/views
+      - ./server.rb:/app/server.rb
+      - ./config.ru:/app/config.ru
+      - ./scripts:/app/scripts:ro
+    command: ["/app/scripts/run-with-reload.sh"]
