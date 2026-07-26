@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "json"
+require "securerandom"
 require "sinatra/base"
+require "uri"
 
 module Madcp
   class App < Sinatra::Base
@@ -9,6 +11,8 @@ module Madcp
       providers = registry.all.to_h do |integration|
         [integration.id, OAuthProvider.new(config: config, integration: integration)]
       end
+      oauth_retrieval_states = {}
+      oauth_retrieval_mutex = Mutex.new
 
       Class.new(self) do
         set :environment, :production
@@ -18,11 +22,14 @@ module Madcp
         set :logging, true
         set :show_exceptions, false
         set :host_authorization, permitted_hosts: []
+        set :oauth_retrieval_states, oauth_retrieval_states
 
         define_method(:config) { config }
         define_method(:registry) { registry }
         define_method(:renderer) { renderer }
         define_method(:providers) { providers }
+        define_method(:oauth_retrieval_states) { oauth_retrieval_states }
+        define_method(:oauth_retrieval_mutex) { oauth_retrieval_mutex }
       end
     end
 
@@ -81,6 +88,49 @@ module Madcp
 
       def oauth_error(error)
         json(error.payload, error.status)
+      end
+
+      def require_oauth_token_retrieval!
+        halt 404, json({ error: "OAuth token retrieval is not available for this integration" }, 404) unless integration.oauth_token_retrieval?
+      end
+
+      def oauth_callback_url
+        "#{config.public_url}/servers/#{integration.id}/oauth_callback"
+      end
+
+      def consume_oauth_retrieval_state(state)
+        oauth_retrieval_mutex.synchronize do
+          data = oauth_retrieval_states.delete(state.to_s)
+          return nil unless data
+          return nil unless data[:server_id] == integration.id
+          return nil if data[:expires_at] < Time.now.to_i
+
+          data
+        end
+      end
+
+      def oauth_query_params
+        URI.decode_www_form(request.query_string.to_s).each_with_object({}) do |(key, value), result|
+          if result.key?(key)
+            result[key] = Array(result[key]) << value
+          else
+            result[key] = value
+          end
+        end
+      end
+
+      def redact_oauth_secrets(value)
+        case value
+        when Hash
+          value.to_h do |key, item|
+            redacted = key.to_s.casecmp?("client_secret") ? "[REDACTED]" : redact_oauth_secrets(item)
+            [key, redacted]
+          end
+        when Array
+          value.map { |item| redact_oauth_secrets(item) }
+        else
+          value
+        end
       end
 
       def integration_locals(integration, extra = {})
@@ -229,6 +279,67 @@ module Madcp
       renderer.page(
         "auth",
         **integration_locals(integration, state: nil, error: e.message, message: nil),
+      )
+    end
+
+    post "/servers/:server_id/oauth" do
+      require_oauth_token_retrieval!
+      provider.verify_operator!(params["username"], params["password"])
+      state = SecureRandom.urlsafe_base64(32)
+      oauth_retrieval_mutex.synchronize do
+        oauth_retrieval_states.delete_if { |_, data| data[:expires_at] < Time.now.to_i }
+        oauth_retrieval_states[state] = {
+          server_id: integration.id,
+          expires_at: Time.now.to_i + 300,
+        }
+      end
+      result = integration.oauth_call(callback_url: oauth_callback_url, state: state)
+      authorization_url = result[:authorization_url] || result["authorization_url"]
+      raise "integration did not return an authorization_url" if authorization_url.to_s.empty?
+
+      redirect authorization_url, 302
+    rescue OAuthProvider::OAuthError => e
+      oauth_error(e)
+    rescue StandardError => e
+      halt 400, json({ error: e.message }, 400)
+    end
+
+    get "/servers/:server_id/oauth_callback" do
+      headers["Cache-Control"] = "no-store"
+      headers["Referrer-Policy"] = "no-referrer"
+      require_oauth_token_retrieval!
+      callback_params = oauth_query_params
+      state = callback_params["state"]
+      halt 400, json({ error: "invalid, expired, or already used OAuth state" }, 400) unless consume_oauth_retrieval_state(state)
+
+      result = nil
+      if callback_params["code"].is_a?(String) && !callback_params["code"].empty?
+        result = integration.oauth_exchange(
+          callback_url: oauth_callback_url,
+          params: callback_params,
+        )
+      end
+      content_type :html
+      renderer.page(
+        "oauth_result",
+        **integration_locals(
+          integration,
+          callback_url: oauth_callback_url,
+          oauth_params: redact_oauth_secrets(callback_params),
+          oauth_result: redact_oauth_secrets(result),
+        ),
+      )
+    rescue StandardError => e
+      status 400
+      content_type :html
+      renderer.page(
+        "oauth_result",
+        **integration_locals(
+          integration,
+          callback_url: oauth_callback_url,
+          oauth_params: redact_oauth_secrets(oauth_query_params),
+          oauth_result: { error: e.message },
+        ),
       )
     end
 

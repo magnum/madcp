@@ -31,6 +31,11 @@ module Madcp
         @version_value = value if value
         @version_value || "1.0.0"
       end
+
+      def oauth_token_retrieval(value = nil)
+        @oauth_token_retrieval_value = !!value unless value.nil?
+        @oauth_token_retrieval_value || false
+      end
     end
 
     attr_reader :config, :tools
@@ -50,6 +55,7 @@ module Madcp
     def version = self.class.version
     def data_dir = config.data_dir(id)
     def allow_write_methods? = config.write_allowed_for?(id)
+    def oauth_token_retrieval? = self.class.oauth_token_retrieval
 
     def mcp_server
       configure_once!
@@ -139,6 +145,8 @@ module Madcp
     def apply_credentials(_params) = raise(NotImplementedError)
     def clear_credentials! = raise(NotImplementedError)
     def configure_tools = raise(NotImplementedError)
+    def oauth_call(callback_url:, state:) = raise(NotImplementedError)
+    def oauth_exchange(callback_url:, params:) = raise(NotImplementedError)
 
     protected
 

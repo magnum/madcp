@@ -11,6 +11,8 @@ The initial integrations are:
   official [`basecamp/hey-cli`](https://github.com/basecamp/hey-cli)
 - `servers/basecamp/` — 38 tools and the `basecamp://skill` resource, backed by
   the official [`basecamp/basecamp-cli`](https://github.com/basecamp/basecamp-cli)
+- `servers/fattureincloud/` — 22 tools for companies, archive documents, issued
+  invoices, clients, and suppliers, using the v2 API directly through `Net::HTTP`
 
 The existing `hey-mcp` and `basecamp-mcp` repositories are not imported or
 modified. The two directories included here are self-contained prototypes that
@@ -31,6 +33,9 @@ madcp/
 │   ├── basecamp/
 │   │   ├── server.rb
 │   │   └── basecamp_client.rb
+│   ├── fattureincloud/
+│   │   ├── server.rb
+│   │   └── fattureincloud_client.rb
 │   └── hey/
 │       ├── server.rb
 │       └── hey_client.rb
@@ -84,6 +89,10 @@ For each `<server_id>`:
 
 - `GET /servers/` — integration index (HTML; add `?format=json` for JSON)
 - `GET /servers/<server_id>/auth` — credential management and OAuth login view
+- `POST /servers/<server_id>/oauth` — authenticated external OAuth token retrieval
+  launch, available only when the integration opts in
+- `GET /servers/<server_id>/oauth_callback` — one-time external OAuth callback
+  that displays the provider response with `no-store` and `no-referrer`
 - `GET /servers/<server_id>/auth/logout` — revoke MADCP sessions and optionally clear CLI credentials
 - `GET /servers/<server_id>/tools` — tool catalog and enabled/write status
 - `POST /servers/<server_id>/tools/<tool>` — direct authenticated tool invocation
@@ -95,6 +104,7 @@ The URL to configure in an MCP client is the MCP endpoint, for example:
 ```text
 https://madcp.example.com/servers/hey/mcp
 https://madcp.example.com/servers/basecamp/mcp
+https://madcp.example.com/servers/fattureincloud/mcp
 ```
 
 `/tools/<tool>` is a convenience API for testing and automation. MCP clients
@@ -114,6 +124,7 @@ Enable writes globally or override one integration:
 ```dotenv
 MADCP_HEY_ALLOW_WRITE_METHODS=true
 MADCP_BASECAMP_ALLOW_WRITE_METHODS=false
+MADCP_FATTUREINCLOUD_ALLOW_WRITE_METHODS=false
 ```
 
 The integration marks mutations with `write: true`. MADCP enforces the policy
@@ -151,6 +162,7 @@ own OAuth issuer:
 ```text
 /servers/hey
 /servers/basecamp
+/servers/fattureincloud
 ```
 
 MADCP supports authorization code + PKCE, refresh tokens, token revocation,
@@ -162,6 +174,28 @@ Integration credentials are separate:
 - HEY: paste `hey auth token --quiet` into `/servers/hey/auth`;
 - Basecamp: paste `basecamp auth token --quiet` and the account ID into
   `/servers/basecamp/auth`.
+- Fatture in Cloud: paste an access token, or enter the MADCP operator
+  credentials and choose **Retrieve OAuth token**. Configure
+  `FATTUREINCLOUD_CLIENT_ID` and `FATTUREINCLOUD_CLIENT_SECRET` first. The
+  redirect URI registered at Fatture in Cloud must exactly match
+  `${MADCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback`.
+
+External OAuth token retrieval is an integration capability, separate from the
+OAuth issuer MADCP exposes to MCP clients. Its launch always requires the MADCP
+operator username and password. Callback state is random, expires after five
+minutes, and can be used only once. Provider tokens are shown only in the
+callback HTML body for copying; they are never put in response headers or URLs.
+
+Fatture in Cloud defaults to the least-privilege scopes
+`entity.clients:r entity.suppliers:r issued_documents.invoices:r archive:r`.
+Override them with `FATTUREINCLOUD_OAUTH_SCOPES`. Write tools forward raw JSON
+objects and remain subject to MADCP's write gate.
+
+References:
+
+- [Authorization code flow](https://developers.fattureincloud.it/docs/authentication/code-flow/vanilla-code/)
+- [API scopes](https://developers.fattureincloud.it/docs/basics/scopes/)
+- [Ruby SDK reference](https://github.com/fattureincloud/fattureincloud-ruby-sdk)
 
 The OAuth token store is currently in memory. Restarting MADCP invalidates MCP
 OAuth sessions, while integration/CLI credentials persist in volumes. A

@@ -35,7 +35,7 @@ module Madcp
 
     def catalog
       all.map do |integration|
-        {
+        item = {
           id: integration.id,
           name: integration.display_name,
           description: integration.description,
@@ -46,6 +46,11 @@ module Madcp
           auth_url: "#{@config.public_url}/servers/#{integration.id}/auth",
           tools_url: "#{@config.public_url}/servers/#{integration.id}/tools",
         }
+        if integration.oauth_token_retrieval?
+          item[:oauth_retrieval_url] = "#{@config.public_url}/servers/#{integration.id}/oauth"
+          item[:oauth_callback_url] = "#{@config.public_url}/servers/#{integration.id}/oauth_callback"
+        end
+        item
       end
     end
   end

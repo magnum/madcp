@@ -1,0 +1,41 @@
+<div class="mx-auto max-w-3xl">
+  <a class="text-sm text-sky-400 hover:text-sky-300" href="/servers/<%= h integration.id %>/auth">← Authentication</a>
+  <h1 class="mt-4 text-3xl font-bold"><%= h integration.display_name %> OAuth result</h1>
+  <p class="mt-2 text-sm text-slate-400">
+    Callback: <code class="break-all"><%= h callback_url %></code>
+  </p>
+
+  <% body = oauth_result.is_a?(Hash) ? (oauth_result[:body] || oauth_result["body"]) : nil %>
+  <% token_body = body.is_a?(Hash) ? body : {} %>
+  <% access_token = token_body["access_token"] || token_body[:access_token] %>
+  <% refresh_token = token_body["refresh_token"] || token_body[:refresh_token] %>
+  <% if access_token || refresh_token %>
+    <section class="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-5">
+      <h2 class="text-lg font-bold text-emerald-200">Copy tokens now</h2>
+      <% { "Access token" => access_token, "Refresh token" => refresh_token }.each do |label, token| %>
+        <% next unless token %>
+        <label class="mt-4 block text-sm font-semibold"><%= h label %></label>
+        <textarea class="mt-2 h-24 w-full rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs"
+                  readonly><%= h token %></textarea>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <h2 class="text-lg font-bold">Callback query parameters</h2>
+    <pre class="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-xs"><%= h JSON.pretty_generate(oauth_params) %></pre>
+  </section>
+
+  <% if oauth_result %>
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="text-lg font-bold">Upstream token response</h2>
+      <% status = oauth_result.is_a?(Hash) ? (oauth_result[:status] || oauth_result["status"]) : nil %>
+      <% upstream_headers = oauth_result.is_a?(Hash) ? (oauth_result[:headers] || oauth_result["headers"] || {}) : {} %>
+      <p class="mt-3 text-sm">Status: <span class="font-mono"><%= h status || "not available" %></span></p>
+      <h3 class="mt-4 font-semibold">Headers</h3>
+      <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-xs"><%= h JSON.pretty_generate(upstream_headers) %></pre>
+      <h3 class="mt-4 font-semibold">Body</h3>
+      <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-xs"><%= h JSON.pretty_generate(body || oauth_result) %></pre>
+    </section>
+  <% end %>
+</div>

@@ -26,7 +26,7 @@ class AppTest < Minitest::Test
 
     assert_equal 200, response.status
     payload = JSON.parse(response.body)
-    assert_equal %w[basecamp hey], payload.fetch("servers").map { |item| item.fetch("id") }
+    assert_equal %w[basecamp fattureincloud hey], payload.fetch("servers").map { |item| item.fetch("id") }
   end
 
   def test_lists_tools_and_write_state
@@ -109,6 +109,7 @@ class AppTest < Minitest::Test
     )
     assert_includes JSON.parse(read.body).dig("result", "contents", 0, "text"), "name: hey"
   end
+
 
   def test_mcp_list_tools_preserve_integration_execution_context
     cases = {
