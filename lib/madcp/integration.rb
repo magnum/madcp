@@ -141,6 +141,7 @@ module Madcp
 
     def instructions = "#{display_name} MCP integration."
     def auth_fields = []
+    def auth_help_content = nil
     def auth_status = { authenticated: false }
     def apply_credentials(_params) = raise(NotImplementedError)
     def clear_credentials! = raise(NotImplementedError)

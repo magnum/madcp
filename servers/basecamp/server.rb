@@ -27,6 +27,24 @@ module Madcp
             "Write tools are disabled unless allow_write_methods is enabled."
         end
 
+        def auth_help_content
+          {
+            title: "Get Basecamp credentials",
+            description: "Authenticate the Basecamp CLI on a trusted computer, then copy its token and account ID below.",
+            steps: [
+              "Sign in with the Basecamp CLI.",
+              "Copy the current token without extra formatting.",
+              "List accounts and choose the numeric account ID MADCP should use.",
+            ],
+            commands: [
+              { label: "Sign in", value: "basecamp auth login" },
+              { label: "Copy the token", value: "basecamp auth token --quiet" },
+              { label: "Find the account ID", value: "basecamp accounts list" },
+            ],
+            note: "Treat the token as a password and paste it only over HTTPS.",
+          }
+        end
+
         def auth_fields
           [
             {

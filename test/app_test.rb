@@ -53,6 +53,65 @@ class AppTest < Minitest::Test
     assert tools.any? { |tool| tool["name"] == "basecamp_skill" }
   end
 
+  def test_every_integration_provides_authentication_help
+    REGISTRY.all.each do |integration|
+      help = integration.auth_help_content
+      assert_kind_of Hash, help
+      assert help[:title]
+      assert help[:steps]&.any?
+    end
+
+    google_help = REGISTRY.fetch("googleworkspace").auth_help_content
+    assert google_help[:commands].any? { |command| command[:value] == "gws auth export --unmasked" }
+  end
+
+  def test_authentication_views_use_readable_copyable_help
+    integration = REGISTRY.fetch("googleworkspace")
+    integration.define_singleton_method(:auth_status) { { authenticated: false } }
+
+    html = RENDERER.page(
+      "auth",
+      title: integration.display_name,
+      integration: integration,
+      public_url: CONFIG.public_url,
+      repo_url: "https://github.com/magnum/madcp",
+      state: nil,
+      error: nil,
+      message: nil,
+    )
+
+    assert_includes html, "gws auth export --unmasked"
+    assert_includes html, "copyAuthCommand(this)"
+    assert_includes html, "whitespace-nowrap"
+    refute_includes html, "<pre"
+    refute_match(/\btext-(?:xs|sm)\b/, html)
+  ensure
+    integration.singleton_class.remove_method(:auth_status) if integration
+  end
+
+  def test_integration_list_status_does_not_wrap
+    integrations = REGISTRY.all
+    integrations.each do |integration|
+      integration.define_singleton_method(:auth_status) { { authenticated: false } }
+    end
+
+    html = RENDERER.page(
+      "servers",
+      title: "MADCP integrations",
+      integrations: integrations,
+      public_url: CONFIG.public_url,
+      repo_url: "https://github.com/magnum/madcp",
+    )
+
+    assert_includes html, "Not authenticated"
+    assert_includes html, "whitespace-nowrap"
+    refute_match(/\btext-(?:xs|sm)\b/, html)
+  ensure
+    integrations&.each do |integration|
+      integration.singleton_class.remove_method(:auth_status)
+    end
+  end
+
   def test_mcp_requires_bearer
     response = @request.post(
       "/servers/hey/mcp",

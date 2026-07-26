@@ -32,6 +32,22 @@ module Madcp
             "All mutations accept a raw JSON object and remain disabled unless write methods are enabled."
         end
 
+        def auth_help_content
+          {
+            title: "Authorize Fatture in Cloud",
+            description: "The simplest option is the OAuth flow available in this form. " \
+                         "MADCP will open Fatture in Cloud and show the returned access token.",
+            steps: [
+              "Configure FATTUREINCLOUD_CLIENT_ID and FATTUREINCLOUD_CLIENT_SECRET.",
+              "Register the callback URL shown below in the Fatture in Cloud application.",
+              "Enter the MADCP operator credentials, then choose Retrieve OAuth token.",
+              "Copy the resulting access token and save it in this form.",
+            ],
+            commands: [],
+            note: "The default company ID is optional; tools can receive company_id explicitly.",
+          }
+        end
+
         def auth_fields
           [
             {

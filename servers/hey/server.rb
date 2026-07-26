@@ -27,6 +27,22 @@ module Madcp
             "Write tools are disabled unless allow_write_methods is enabled."
         end
 
+        def auth_help_content
+          {
+            title: "Get a HEY token",
+            description: "Authenticate the HEY CLI on a trusted computer, then paste the token below.",
+            steps: [
+              "Sign in with the HEY CLI.",
+              "Print the token without extra formatting.",
+            ],
+            commands: [
+              { label: "Sign in", value: "hey auth login" },
+              { label: "Copy the token", value: "hey auth token --quiet" },
+            ],
+            note: "Treat the token as a password and paste it only over HTTPS.",
+          }
+        end
+
         def auth_fields
           [{
             name: "hey_token",

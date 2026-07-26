@@ -1,44 +1,51 @@
-<header class="mb-10">
-  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.25em] text-sky-400">Multi-adapter MCP</p>
-  <h1 class="text-4xl font-bold tracking-tight">MADCP integrations</h1>
-  <p class="mt-3 max-w-2xl text-slate-400">
+<header class="mb-12 border-b border-stone-300 pb-10 dark:border-zinc-700">
+  <p class="mb-3 font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-zinc-400">Multi-adapter MCP</p>
+  <h1 class="text-5xl font-bold tracking-tight">Integrations</h1>
+  <p class="mt-4 max-w-3xl text-lg leading-8 text-stone-700 dark:text-zinc-300">
     Each integration has an independent MCP endpoint, OAuth issuer, credentials, and write-method policy.
   </p>
 </header>
 
-<div class="grid gap-5 md:grid-cols-2">
+<div class="divide-y divide-stone-300 border-y border-stone-300 dark:divide-zinc-700 dark:border-zinc-700">
   <% integrations.each do |item| %>
     <% status = item.auth_status %>
-    <article class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-semibold"><%= h item.display_name %></h2>
-          <p class="mt-2 text-sm text-slate-400"><%= h item.description %></p>
+    <article class="py-9">
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div class="min-w-0">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <h2 class="text-3xl font-bold tracking-tight"><%= h item.display_name %></h2>
+              <p class="mt-3 max-w-3xl leading-7 text-stone-700 dark:text-zinc-300"><%= h item.description %></p>
+            </div>
+            <span class="w-fit shrink-0 whitespace-nowrap rounded-full border px-4 py-2 font-semibold <%= status[:authenticated] ? "border-emerald-700 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100" : "border-amber-700 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-100" %>">
+              <%= status[:authenticated] ? "Authenticated" : "Not authenticated" %>
+            </span>
+          </div>
+
+          <dl class="mt-7 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt class="font-semibold text-stone-500 dark:text-zinc-400">Server ID</dt>
+              <dd class="mt-1 font-mono"><%= h item.id %></dd>
+            </div>
+            <div>
+              <dt class="font-semibold text-stone-500 dark:text-zinc-400">Write methods</dt>
+              <dd class="mt-1"><%= item.allow_write_methods? ? "Enabled" : "Disabled" %></dd>
+            </div>
+          </dl>
+
+          <div class="mt-7 rounded-lg bg-stone-100 p-4 dark:bg-zinc-900">
+            <p class="font-semibold text-stone-500 dark:text-zinc-400">MCP endpoint</p>
+            <code class="mt-2 block overflow-x-auto whitespace-nowrap font-mono"><%= h "#{public_url}/servers/#{item.id}/mcp" %></code>
+          </div>
         </div>
-        <span class="rounded-full px-3 py-1 text-xs font-semibold <%= status[:authenticated] ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300" %>">
-          <%= status[:authenticated] ? "authenticated" : "not authenticated" %>
-        </span>
+
+        <div class="flex flex-col justify-center gap-3">
+          <a class="rounded-lg bg-stone-950 px-5 py-3 text-center font-bold text-stone-50 hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+             href="/servers/<%= h item.id %>/auth">Authentication</a>
+          <a class="rounded-lg border-2 border-stone-950 px-5 py-3 text-center font-bold hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 dark:border-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+             href="/servers/<%= h item.id %>/tools">Tools JSON</a>
+        </div>
       </div>
-
-      <dl class="mt-6 space-y-2 text-sm">
-        <div class="flex justify-between gap-4">
-          <dt class="text-slate-500">server_id</dt>
-          <dd class="font-mono"><%= h item.id %></dd>
-        </div>
-        <div class="flex justify-between gap-4">
-          <dt class="text-slate-500">write methods</dt>
-          <dd><%= item.allow_write_methods? ? "enabled" : "disabled" %></dd>
-        </div>
-      </dl>
-
-      <div class="mt-6 grid grid-cols-2 gap-3">
-        <a class="rounded-lg bg-sky-500 px-4 py-2 text-center font-semibold text-slate-950 hover:bg-sky-400" href="/servers/<%= h item.id %>/auth">Authentication</a>
-        <a class="rounded-lg border border-slate-700 px-4 py-2 text-center font-semibold hover:bg-slate-800" href="/servers/<%= h item.id %>/tools">Tools JSON</a>
-      </div>
-
-      <p class="mt-4 break-all rounded-lg bg-slate-950 p-3 font-mono text-xs text-slate-400">
-        <%= h "#{public_url}/servers/#{item.id}/mcp" %>
-      </p>
     </article>
   <% end %>
 </div>

@@ -24,6 +24,25 @@ module Madcp
             "The unrestricted generic API tool is write-gated."
         end
 
+        def auth_help_content
+          {
+            title: "Prepare Google Workspace credentials",
+            description: "Run these commands on a trusted computer where gws can open a browser. " \
+                         "Then paste the complete exported JSON into the credentials field below.",
+            steps: [
+              "Set up or select the Google Cloud project and enable the Workspace APIs.",
+              "Sign in with the Google account MADCP should use.",
+              "Export unmasked credentials containing the refresh token.",
+            ],
+            commands: [
+              { label: "Set up the Google Cloud project", value: "gws auth setup" },
+              { label: "Authorize your Google account", value: "gws auth login" },
+              { label: "Export credentials for MADCP", value: "gws auth export --unmasked" },
+            ],
+            note: "The exported JSON is sensitive. Paste it only over HTTPS and do not commit it.",
+          }
+        end
+
         def auth_fields
           [
             {
