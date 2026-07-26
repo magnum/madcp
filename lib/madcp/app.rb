@@ -202,14 +202,6 @@ module Madcp
         ""
       end
 
-      def response_body_for_log
-        body = response.body
-        body = body.join if body.is_a?(Array)
-        body.to_s
-      rescue StandardError
-        ""
-      end
-
       def log_request!
         path = request.fullpath.to_s
         return if path == "/healthz" || path.start_with?("/healthz?")
@@ -230,7 +222,6 @@ module Madcp
           duration_ms: duration_ms,
           user_agent: request.user_agent,
           request_body: env["madcp.request_body"],
-          response_body: response_body_for_log,
         )
       rescue StandardError => e
         warn("[madcp] request logging skipped: #{e.class}: #{e.message}")

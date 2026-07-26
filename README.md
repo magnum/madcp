@@ -66,10 +66,9 @@ For each `<server_id>`:
 
 ## Request logging
 
-Every HTTP request (except `/healthz`) is logged:
+Every HTTP request (except `/healthz`) is logged to **file and stdout** (same line):
 
-- **File** — `logs/requests.logs` (override with `MADCP_REQUEST_LOG`): timestamp, IP, method, path, status, duration, user-agent, request body
-- **Stdout** — same fields plus the response body (secrets redacted; bodies truncated via `MADCP_REQUEST_LOG_MAX_CHARS`, default `8000`)
+`logs/requests.logs` (override with `MADCP_REQUEST_LOG`): timestamp, IP, HTTP method, path, status, duration, user-agent, plus when present `server_id`, MCP `mcp_method`, tool `command`, and `arguments` / `params` (secrets redacted; truncated via `MADCP_REQUEST_LOG_MAX_CHARS`). Response bodies are not logged.
 
 With Docker Compose, `./logs` is bind-mounted to `/app/logs`.
 

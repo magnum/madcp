@@ -45,21 +45,32 @@ class AppTest < Minitest::Test
       status: 200,
       duration_ms: 12,
       user_agent: "test-agent",
-      request_body: JSON.generate(method: "tools/call", params: { name: "toggltrack_me" }),
-      response_body: JSON.generate(result: { access_token: "secret-value", ok: true }),
+      request_body: JSON.generate(
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "toggltrack_me",
+          arguments: { with_related_data: true, access_token: "secret-value" },
+        },
+      ),
     )
 
     file_line = File.read(log_path).lines.last.to_s
     out_line = stdout.string.lines.last.to_s
 
+    assert_equal file_line, out_line
     assert_includes file_line, "madcp.request"
     assert_includes file_line, "ip=203.0.113.9"
     assert_includes file_line, "method=POST"
     assert_includes file_line, "path=/servers/toggltrack/mcp"
+    assert_includes file_line, "server_id=toggltrack"
+    assert_includes file_line, "mcp_method=tools/call"
+    assert_includes file_line, "command=toggltrack_me"
+    assert_includes file_line, "arguments="
+    assert_includes file_line, "[REDACTED]"
+    refute_includes file_line, "secret-value"
     refute_includes file_line, "response="
-    assert_includes out_line, "response="
-    assert_includes out_line, "[REDACTED]"
-    refute_includes out_line, "secret-value"
 
     before = File.size(log_path)
     response = @request.get(
