@@ -25,8 +25,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /tmp
 RUN case "${TARGETARCH}" in \
-      amd64) target="x86_64-unknown-linux-gnu" ;; \
-      arm64) target="aarch64-unknown-linux-gnu" ;; \
+      amd64) target="x86_64-unknown-linux-musl" ;; \
+      arm64) target="aarch64-unknown-linux-musl" ;; \
       *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
     && archive="google-workspace-cli-${target}.tar.gz" \
