@@ -23,7 +23,8 @@ module Madcp
               "file",
             ),
             "GOOGLE_WORKSPACE_PROJECT_ID" => ENV["GOOGLE_WORKSPACE_PROJECT_ID"],
-          }.transform_values { |value| value.to_s.strip.empty? ? nil : value }
+            "HOME" => ENV["HOME"],
+          }.transform_values { |value| value.to_s.strip.empty? ? nil : value }.compact
           super(
             bin: ENV.fetch("GOOGLEWORKSPACE_BIN", "gws"),
             timeout: ENV.fetch("GOOGLEWORKSPACE_TIMEOUT", "60").to_i,

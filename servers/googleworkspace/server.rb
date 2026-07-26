@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require_relative "googleworkspace_client"
 
 module Madcp
@@ -46,10 +47,12 @@ module Madcp
               },
               { label: "Export credentials for MADCP", value: "gws auth export --unmasked" },
             ],
-            note: "The exported authorized_user JSON may not contain the project ID. " \
-                  "It identifies the Google account and OAuth client; GOOGLE_WORKSPACE_PROJECT_ID " \
-                  "selects the project used for quota, billing, and helpers. The JSON is sensitive: " \
-                  "paste it only over HTTPS and do not commit it.",
+            note: "Paste only the JSON object from gws auth export --unmasked, not the " \
+                  "Using keyring backend line. The exported authorized_user JSON may not contain " \
+                  "the project ID. Set GOOGLE_WORKSPACE_PROJECT_ID explicitly. The JSON is sensitive: " \
+                  "paste it only over HTTPS and do not commit it. If MADCP says it is not authenticated, " \
+                  "confirm the JSON includes type, client_id, client_secret, and a full unmasked " \
+                  "refresh_token, then retry after rebuilding/restarting the container.",
           }
         end
 
@@ -81,27 +84,30 @@ module Madcp
 
         def auth_status
           raw = @client.auth_status
-          parsed = JSON.parse(raw)
+          parsed = parse_gws_json(raw)
           data = parsed["data"] || parsed
-          credential_source = data["credential_source"].to_s.downcase
-          auth_method = data["auth_method"].to_s.downcase
-          authenticated = data["authenticated"] == true ||
-                          data["token_valid"] == true ||
-                          (!credential_source.empty? && credential_source != "none") ||
-                          (!auth_method.empty? && auth_method != "none") ||
-                          %w[authenticated success ok].include?(data["status"].to_s.downcase)
+          credentials = credentials_file_status
+          authenticated = google_authenticated?(data, credentials)
           {
             authenticated: authenticated,
             auth_method: data["auth_method"],
             credential_source: data["credential_source"],
             token_valid: data["token_valid"],
-            project_id: ENV["GOOGLE_WORKSPACE_PROJECT_ID"],
+            token_error: data["token_error"] || data["error_description"] || data["error"],
+            plain_credentials_exists: data["plain_credentials_exists"],
+            encrypted_credentials_exists: data["encrypted_credentials_exists"],
+            credentials_type: credentials[:type],
+            credentials_file_valid: credentials[:valid],
+            credentials_file_error: credentials[:error],
+            project_id: ENV["GOOGLE_WORKSPACE_PROJECT_ID"] || data["project_id"],
             credentials_file: ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"],
+            gws_status: data,
           }
         rescue StandardError => e
           {
             authenticated: false,
             project_id: ENV["GOOGLE_WORKSPACE_PROJECT_ID"],
+            credentials_file: ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"],
             error: e.message,
           }
         end
@@ -117,15 +123,25 @@ module Madcp
           updates["GOOGLE_WORKSPACE_CLI_TOKEN"] = token unless token.empty?
           updates["GOOGLE_WORKSPACE_PROJECT_ID"] = project_id unless project_id.empty?
           unless credentials_json.empty?
-            parsed = JSON.parse(credentials_json)
+            begin
+              parsed = JSON.parse(credentials_json)
+            rescue JSON::ParserError => e
+              raise "Invalid Google Workspace credentials JSON: #{e.message}"
+            end
             raise "Google Workspace credentials must be a JSON object" unless parsed.is_a?(Hash)
+            validate_credentials_json!(parsed)
 
+            FileUtils.mkdir_p(File.dirname(credentials_path))
             File.write(credentials_path, JSON.pretty_generate(parsed) + "\n", perm: 0o600)
+            sync_gws_plain_credentials!(parsed)
             updates["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = credentials_path
           end
           persist_credentials!(updates)
           @client = Client.new
-          raise "Google Workspace CLI is not authenticated" unless auth_status[:authenticated]
+          status = auth_status
+          unless status[:authenticated]
+            raise authentication_failure_message(status)
+          end
 
           true
         rescue StandardError => e
@@ -137,12 +153,7 @@ module Madcp
           end
           persist_credentials!(old_env)
           @client = Client.new
-          message = if e.is_a?(JSON::ParserError)
-                      "Invalid Google Workspace credentials JSON: #{e.message}"
-                    else
-                      e.message
-                    end
-          raise message
+          raise e.message
         ensure
           token = nil
           credentials_json = nil
@@ -150,6 +161,8 @@ module Madcp
 
         def clear_credentials!
           File.delete(credentials_path) if File.file?(credentials_path)
+          plain = File.join(gws_config_dir, "credentials.json")
+          File.delete(plain) if File.file?(plain)
           persist_credentials!(
             "GOOGLE_WORKSPACE_CLI_TOKEN" => nil,
             "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE" => nil,
@@ -180,6 +193,98 @@ module Madcp
 
         def credentials_path
           File.join(data_dir, "credentials.json")
+        end
+
+        def gws_config_dir
+          ENV.fetch("GOOGLE_WORKSPACE_CLI_CONFIG_DIR") do
+            File.join(Dir.home, ".config", "gws")
+          end
+        end
+
+        def sync_gws_plain_credentials!(credentials)
+          FileUtils.mkdir_p(gws_config_dir)
+          target = File.join(gws_config_dir, "credentials.json")
+          File.write(target, JSON.pretty_generate(credentials) + "\n", perm: 0o600)
+        end
+
+        def google_authenticated?(data, credentials)
+          return true if data["authenticated"] == true
+          return true if data["token_valid"] == true
+          return true if %w[authenticated success ok].include?(data["status"].to_s.downcase)
+          return false if data["token_valid"] == false
+
+          if credentials[:valid]
+            return true if credentials[:type] == "service_account"
+            if credentials[:type] == "authorized_user"
+              return true if data["plain_credentials_exists"] == true
+              return true if data["encrypted_credentials_exists"] == true
+              return true if data["auth_method"].to_s == "oauth2"
+              return true if File.file?(ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"].to_s)
+            end
+          end
+
+          false
+        end
+
+        def authentication_failure_message(status)
+          details = []
+          details << status[:token_error] if status[:token_error]
+          details << status[:credentials_file_error] if status[:credentials_file_error]
+          details << status[:error] if status[:error]
+
+          if status[:credentials_file].to_s.empty?
+            details << "no credentials file was stored"
+          elsif status[:credentials_file_valid] == false
+            details << "stored credentials file is invalid"
+          elsif status[:plain_credentials_exists] == false && status[:encrypted_credentials_exists] == false
+            details << "gws did not see the credentials file at #{status[:credentials_file]}"
+          elsif status[:token_valid] == false
+            details << "gws rejected the refresh token"
+          elsif status[:token_valid].nil?
+            details << "gws could not validate the refresh token (often outbound HTTPS from the container, or a revoked/masked token)"
+          end
+
+          message = "Google Workspace CLI is not authenticated"
+          message += ": #{details.join("; ")}" unless details.empty?
+          if status[:gws_status]
+            message += " | gws auth status: #{JSON.generate(status[:gws_status])}"
+          end
+          message
+        end
+
+        def validate_credentials_json!(credentials)
+          type = credentials["type"].to_s
+          required = case type
+                     when "authorized_user"
+                       %w[client_id client_secret refresh_token]
+                     when "service_account"
+                       %w[client_email private_key]
+                     else
+                       raise "Unsupported Google credential type '#{type}'. " \
+                             "Use gws auth export --unmasked or a service-account JSON file."
+                     end
+          missing = required.select { |key| credentials[key].to_s.empty? }
+          return if missing.empty?
+
+          raise "Google #{type} credentials are missing: #{missing.join(", ")}"
+        end
+
+        def credentials_file_status
+          path = ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"].to_s
+          return { valid: false, type: nil } if path.empty? || !File.file?(path)
+
+          credentials = JSON.parse(File.read(path))
+          validate_credentials_json!(credentials)
+          { valid: true, type: credentials["type"] }
+        rescue StandardError => e
+          { valid: false, type: credentials&.dig("type"), error: e.message }
+        end
+
+        def parse_gws_json(raw)
+          json_start = raw.to_s.index("{")
+          raise "gws returned no JSON authentication status" unless json_start
+
+          JSON.parse(raw[json_start..])
         end
 
         def define_discovery_tools

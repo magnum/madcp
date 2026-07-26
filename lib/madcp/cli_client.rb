@@ -18,7 +18,8 @@ module Madcp
     def run(args, truncate: true)
       raise CliError, "binary '#{@bin}' not found in PATH" unless bin_available?
 
-      Open3.popen3(@env, @bin, *args) do |stdin, stdout, stderr, wait_thr|
+      child_env = ENV.to_h.merge(@env.transform_values { |value| value.nil? ? nil : value.to_s })
+      Open3.popen3(child_env, @bin, *args) do |stdin, stdout, stderr, wait_thr|
         stdin.close
         out_reader = Thread.new { stdout.read }
         err_reader = Thread.new { stderr.read }

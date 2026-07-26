@@ -70,6 +70,80 @@ class GoogleWorkspaceTest < Minitest::Test
     assert tools.select { |tool| tool[:write] }.all? { |tool| !tool[:enabled] }
   end
 
+  def test_auth_status_accepts_gws_diagnostic_prefix
+    @client.define_singleton_method(:auth_status) do
+      "Using keyring backend: file\n" \
+        '{"auth_method":"oauth2","token_valid":true,"credential_source":"credentials_file"}'
+    end
+
+    status = @integration.auth_status
+
+    assert status[:authenticated]
+    assert_equal true, status[:token_valid]
+  end
+
+  def test_auth_status_accepts_exported_user_credentials_without_token_valid
+    path = File.join(@integration.data_dir, "credentials.json")
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(
+      path,
+      JSON.generate(
+        type: "authorized_user",
+        client_id: "client.apps.googleusercontent.com",
+        client_secret: "secret",
+        refresh_token: "refresh",
+      ),
+    )
+    ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = path
+    @client.define_singleton_method(:auth_status) do
+      JSON.generate(
+        auth_method: "oauth2",
+        plain_credentials_exists: true,
+        credential_source: "none",
+      )
+    end
+
+    status = @integration.auth_status
+
+    assert status[:authenticated]
+    assert_equal "authorized_user", status[:credentials_type]
+  ensure
+    ENV.delete("GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE")
+    File.delete(path) if path && File.file?(path)
+  end
+
+  def test_authentication_failure_includes_gws_status_details
+    @client.define_singleton_method(:auth_status) do
+      JSON.generate(auth_method: "none", plain_credentials_exists: false, token_valid: false)
+    end
+    message = @integration.send(
+      :authentication_failure_message,
+      @integration.auth_status,
+    )
+
+    assert_includes message, "Google Workspace CLI is not authenticated"
+    assert_includes message, "gws auth status"
+  end
+
+  def test_credentials_validation_requires_exported_user_or_service_account_json
+    error = assert_raises(RuntimeError) do
+      @integration.send(
+        :validate_credentials_json!,
+        "type" => "authorized_user",
+        "client_id" => "client",
+      )
+    end
+    assert_includes error.message, "client_secret"
+    assert_includes error.message, "refresh_token"
+
+    @integration.send(
+      :validate_credentials_json!,
+      "type" => "service_account",
+      "client_email" => "service@example.test",
+      "private_key" => "private",
+    )
+  end
+
   def test_typed_sheet_read_maps_to_discovery_api
     @integration.call_tool(
       "googleworkspace_sheet_values",
