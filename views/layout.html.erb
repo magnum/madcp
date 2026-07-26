@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= h title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <main class="mx-auto w-full max-w-5xl px-6 py-12">
+      <%= content %>
+    </main>
+    <footer class="fixed inset-x-0 bottom-0 border-t border-slate-800 bg-slate-950/95 px-6 py-3 text-center text-sm text-slate-400 backdrop-blur">
+      Copyright <%= year %> - Antonio Molinari ·
+      <a class="text-sky-400 hover:text-sky-300" href="<%= h repo_url %>" target="_blank" rel="noopener noreferrer">madcp</a>
+    </footer>
+  </body>
+</html>

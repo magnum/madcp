@@ -1,0 +1,20 @@
+services:
+  madcp:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${MADCP_HOST_PORT:-8765}:8765"
+    volumes:
+      - madcp-data:/app/data
+      - basecamp-config:/home/madcp/.config/basecamp
+      - basecamp-cache:/home/madcp/.cache/basecamp
+      - hey-config:/home/madcp/.config/hey-cli
+
+volumes:
+  madcp-data:
+  basecamp-config:
+  basecamp-cache:
+  hey-config:

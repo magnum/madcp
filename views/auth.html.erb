@@ -1,0 +1,62 @@
+<div class="mx-auto max-w-xl">
+  <a class="text-sm text-sky-400 hover:text-sky-300" href="/servers/">← All integrations</a>
+  <h1 class="mt-4 text-3xl font-bold"><%= h integration.display_name %> authentication</h1>
+
+  <% if error %>
+    <div class="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-red-200"><%= h error %></div>
+  <% end %>
+  <% if message %>
+    <div class="mt-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-200"><%= h message %></div>
+  <% end %>
+
+  <% status = integration.auth_status %>
+  <div class="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
+    Integration status:
+    <strong class="<%= status[:authenticated] ? "text-emerald-300" : "text-amber-300" %>">
+      <%= status[:authenticated] ? "authenticated" : "not authenticated" %>
+    </strong>
+    <% if status[:account_id] %>
+      · account <span class="font-mono"><%= h status[:account_id] %></span>
+    <% end %>
+  </div>
+
+  <form class="mt-6 space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+        method="post"
+        action="/servers/<%= h integration.id %>/auth/<%= state ? "callback" : "credentials" %>">
+    <% if state %>
+      <input type="hidden" name="state" value="<%= h state %>">
+    <% end %>
+
+    <div>
+      <label class="mb-2 block text-sm font-semibold" for="username">MADCP username</label>
+      <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" id="username" name="username" autocomplete="username" required>
+    </div>
+    <div>
+      <label class="mb-2 block text-sm font-semibold" for="password">MADCP password</label>
+      <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+
+    <% integration.auth_fields.each do |field| %>
+      <div>
+        <label class="mb-2 block text-sm font-semibold" for="<%= h field[:name] %>"><%= h field[:label] %></label>
+        <% if field[:help] %>
+          <pre class="mb-2 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-300"><%= h field[:help] %></pre>
+        <% end %>
+        <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
+               id="<%= h field[:name] %>"
+               name="<%= h field[:name] %>"
+               type="<%= h field[:type] || "text" %>"
+               <%= "required" if field[:required] %>>
+      </div>
+    <% end %>
+
+    <button class="w-full rounded-lg bg-sky-500 px-4 py-3 font-bold text-slate-950 hover:bg-sky-400" type="submit">
+      <%= state ? "Authorize MCP client" : "Update integration credentials" %>
+    </button>
+  </form>
+
+  <div class="mt-5 flex justify-between text-sm">
+    <a class="text-sky-400 hover:text-sky-300" href="/servers/<%= h integration.id %>/tools">View tools</a>
+    <a class="text-red-300 hover:text-red-200" href="/servers/<%= h integration.id %>/auth/logout">Logout / revoke</a>
+  </div>
+</div>

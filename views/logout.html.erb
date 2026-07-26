@@ -1,0 +1,32 @@
+<div class="mx-auto max-w-xl">
+  <a class="text-sm text-sky-400 hover:text-sky-300" href="/servers/<%= h integration.id %>/auth">← Authentication</a>
+  <h1 class="mt-4 text-3xl font-bold">Logout from <%= h integration.display_name %></h1>
+
+  <% if error %>
+    <div class="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-red-200"><%= h error %></div>
+  <% end %>
+  <% if message %>
+    <div class="mt-6 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-200"><%= h message %></div>
+  <% end %>
+
+  <form class="mt-6 space-y-5 rounded-2xl border border-slate-800 bg-slate-900 p-6" method="post">
+    <div>
+      <label class="mb-2 block text-sm font-semibold" for="username">MADCP username</label>
+      <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" id="username" name="username" required>
+    </div>
+    <div>
+      <label class="mb-2 block text-sm font-semibold" for="password">MADCP password</label>
+      <input class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" id="password" name="password" type="password" required>
+    </div>
+    <label class="flex items-start gap-3 rounded-lg bg-slate-950 p-4">
+      <input class="mt-1" type="checkbox" name="clear_integration" value="1">
+      <span>
+        <strong class="block">Also clear <%= h integration.display_name %> credentials</strong>
+        <span class="text-sm text-slate-400">Otherwise only MADCP OAuth sessions are revoked.</span>
+      </span>
+    </label>
+    <button class="w-full rounded-lg bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-400" type="submit">
+      Revoke sessions
+    </button>
+  </form>
+</div>
