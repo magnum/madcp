@@ -5,7 +5,7 @@ ENV["MADCP_OAUTH_USERNAME"] = "admin"
 ENV["MADCP_OAUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
-ENV["MADCP_ALLOW_WRITE_METHODS"] = "false"
+ENV["MADCP_ALLOW_WRITE"] = "false"
 
 require "minitest/autorun"
 require "rack/mock"
@@ -95,8 +95,8 @@ class FattureInCloudTest < Minitest::Test
   end
 
   def test_delete_accepts_id_and_company_without_payload_when_writes_enabled
-    old_write_override = ENV["MADCP_FATTUREINCLOUD_ALLOW_WRITE_METHODS"]
-    ENV["MADCP_FATTUREINCLOUD_ALLOW_WRITE_METHODS"] = "true"
+    old_write_override = ENV["FATTUREINCLOUD_ALLOW_WRITE"]
+    ENV["FATTUREINCLOUD_ALLOW_WRITE"] = "true"
     integration = Madcp::Servers::FattureInCloud::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
@@ -115,7 +115,7 @@ class FattureInCloudTest < Minitest::Test
                           .dig(:input_schema, :required)
     assert_equal ["id"], required
   ensure
-    ENV["MADCP_FATTUREINCLOUD_ALLOW_WRITE_METHODS"] = old_write_override
+    ENV["FATTUREINCLOUD_ALLOW_WRITE"] = old_write_override
   end
 
   def test_oauth_uses_exact_callback_and_json_code_exchange

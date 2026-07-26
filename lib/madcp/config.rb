@@ -14,7 +14,11 @@ module Madcp
       @static_bearer = ENV.fetch("MADCP_AUTH_TOKEN", "")
       @oauth_password = ENV.fetch("MADCP_OAUTH_PASSWORD", "")
       @oauth_password = @static_bearer if @oauth_password.empty?
-      @allow_write_methods = truthy?(ENV.fetch("MADCP_ALLOW_WRITE_METHODS", "false"))
+      global_write = ENV.fetch(
+        "MADCP_ALLOW_WRITE",
+        ENV.fetch("MADCP_ALLOW_WRITE_METHODS", "false"),
+      )
+      @allow_write_methods = truthy?(global_write)
       @allowed_hosts = csv(ENV.fetch("MADCP_ALLOWED_HOSTS", "localhost,127.0.0.1"))
       @allowed_origins = csv(ENV.fetch("MADCP_ALLOWED_ORIGINS", ""))
       @allowed_origins = derived_origins if @allowed_origins.empty?
@@ -32,7 +36,9 @@ module Madcp
     end
 
     def write_allowed_for?(server_id)
-      raw = ENV["MADCP_#{server_id.upcase.gsub(/[^A-Z0-9]/, "_")}_ALLOW_WRITE_METHODS"]
+      prefix = server_id.upcase.gsub(/[^A-Z0-9]/, "_")
+      raw = ENV["#{prefix}_ALLOW_WRITE"]
+      raw = ENV["MADCP_#{prefix}_ALLOW_WRITE_METHODS"] if raw.nil?
       raw.nil? ? @allow_write_methods : truthy?(raw)
     end
 

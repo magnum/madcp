@@ -116,15 +116,15 @@ separate HTTP path for every tool.
 All integrations are read-only by default:
 
 ```dotenv
-MADCP_ALLOW_WRITE_METHODS=false
+MADCP_ALLOW_WRITE=false
 ```
 
 Enable writes globally or override one integration:
 
 ```dotenv
-MADCP_HEY_ALLOW_WRITE_METHODS=true
-MADCP_BASECAMP_ALLOW_WRITE_METHODS=false
-MADCP_FATTUREINCLOUD_ALLOW_WRITE_METHODS=false
+HEY_ALLOW_WRITE=true
+BASECAMP_ALLOW_WRITE=false
+FATTUREINCLOUD_ALLOW_WRITE=false
 ```
 
 The integration marks mutations with `write: true`. MADCP enforces the policy

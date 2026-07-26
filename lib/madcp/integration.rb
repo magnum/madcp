@@ -96,7 +96,7 @@ module Madcp
             if definition.write && !integration.allow_write_methods?
               integration.send(
                 :text_response,
-                "ERROR: write method disabled. Set MADCP_#{integration.id.upcase}_ALLOW_WRITE_METHODS=true.",
+                "ERROR: write method disabled. Set #{integration.id.upcase}_ALLOW_WRITE=true.",
               )
             else
               allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
