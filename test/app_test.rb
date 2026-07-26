@@ -40,9 +40,11 @@ class AppTest < Minitest::Test
     assert_includes html, 'id="theme-toggle"'
     assert_includes html, 'href="/logout"'
     assert_includes html, ">MadCP</a>"
+    assert_includes html, "text-5xl"
     assert_includes html, "Integrations"
-    refute_includes html, "text-7xl"
-    refute_includes html, "text-8xl"
+    assert_includes html, "text-3xl"
+    assert_includes html, "text-2xl"
+    refute_includes html, "tracking-[0.2em]"
   end
 
   def test_logout_challenges_basic_auth_again
