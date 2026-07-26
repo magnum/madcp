@@ -71,6 +71,52 @@ class GoogleWorkspaceTest < Minitest::Test
     assert tools.any? { |tool| tool[:name] == "googleworkspace_api_read" && !tool[:write] }
     assert tools.any? { |tool| tool[:name] == "googleworkspace_api_call" && tool[:write] }
     assert tools.select { |tool| tool[:write] }.all? { |tool| !tool[:enabled] }
+
+    batch = tools.find { |tool| tool[:name] == "googleworkspace_doc_batch_update" }
+    assert batch[:write]
+    assert batch[:input_schema][:properties].key?(:suggest)
+    assert batch[:input_schema][:properties].key?(:write_mode)
+    assert_includes batch[:description], "suggest=true"
+  end
+
+  def test_doc_batch_update_suggest_sets_write_control
+    old = ENV["GOOGLEWORKSPACE_ALLOW_WRITE"]
+    ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
+    integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+    client = RecordingClient.new
+    integration.instance_variable_set(:@client, client)
+
+    integration.call_tool(
+      "googleworkspace_doc_batch_update",
+      document_id: "doc-1",
+      suggest: true,
+      requests: [{ insertText: { text: "Hi", location: { index: 1 } } }],
+    )
+
+    _kind, options = client.calls.fetch(0)
+    assert_equal "docs", options[:service]
+    assert_equal "batchUpdate", options[:method]
+    assert_equal(
+      deep_stringify(
+        requests: [{ insertText: { text: "Hi", location: { index: 1 } } }],
+        writeControl: { writeMode: "SUGGEST" },
+      ),
+      deep_stringify(options[:body]),
+    )
+  ensure
+    ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = old
+  end
+
+  def test_doc_batch_update_edit_mode_omits_write_control
+    body = @integration.send(
+      :docs_batch_update_body,
+      requests: [{ insertText: { text: "x", location: { index: 1 } } }],
+      suggest: false,
+      write_mode: "EDIT",
+    )
+
+    assert_equal [{ insertText: { text: "x", location: { index: 1 } } }], body[:requests]
+    refute body.key?(:writeControl)
   end
 
   def test_auth_status_accepts_gws_diagnostic_prefix
@@ -331,5 +377,18 @@ class GoogleWorkspaceTest < Minitest::Test
     assert_equal "file-1", client.calls.fetch(0).last.dig(:params, :fileId)
   ensure
     registry_integration.instance_variable_set(:@client, old_client) if registry_integration
+  end
+
+  private
+
+  def deep_stringify(value)
+    case value
+    when Hash
+      value.to_h { |key, item| [key.to_s, deep_stringify(item)] }
+    when Array
+      value.map { |item| deep_stringify(item) }
+    else
+      value
+    end
   end
 end

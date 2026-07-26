@@ -22,6 +22,8 @@ module Madcp
 
         def instructions
           "Use typed Google Docs and Sheets tools for common document editing. " \
+            "For Docs, googleworkspace_doc_batch_update can apply changes as collaborative " \
+            "suggestions: set suggest=true or write_mode=SUGGEST (Docs API writeControl). " \
             "Drive tools enable shared-drive access by default via supportsAllDrives. " \
             "Use googleworkspace_discover and googleworkspace_schema to inspect any other Workspace API. " \
             "The unrestricted generic API tool is write-gated."
@@ -423,20 +425,34 @@ module Madcp
 
           define_tool(
             name: "googleworkspace_doc_batch_update",
-            description: "Apply rich-text and structural updates to a Google Docs document.",
+            description: "Apply rich-text and structural updates to a Google Docs document. " \
+                         "Set suggest=true (or write_mode=SUGGEST) to apply the requests as " \
+                         "collaborative suggestions instead of direct edits (Docs API writeControl).",
             properties: {
               document_id: string_prop("Google Docs document ID"),
-              requests: { type: "array", items: { type: "object" }, description: "Docs API batchUpdate requests" },
+              requests: {
+                type: "array",
+                items: { type: "object" },
+                description: "Docs API batchUpdate requests (insertText, replaceAllText, styles, …)",
+              },
+              suggest: boolean_prop(
+                "If true, apply requests as suggestions (writeControl.writeMode=SUGGEST). " \
+                "Default false = direct edit.",
+              ),
+              write_mode: string_prop(
+                "Docs writeControl.writeMode: EDIT (direct, default) or SUGGEST (suggestion mode). " \
+                "Overrides suggest when set.",
+              ),
             },
             required: %w[document_id requests],
             write: true,
-          ) do |document_id:, requests:|
+          ) do |document_id:, requests:, suggest: false, write_mode: nil|
             gws_api(
               "docs",
               ["documents"],
               "batchUpdate",
               params: { documentId: document_id },
-              body: { requests: requests },
+              body: docs_batch_update_body(requests: requests, suggest: suggest, write_mode: write_mode),
             )
           end
         end
@@ -611,6 +627,29 @@ module Madcp
               body: body,
             )
           end
+        end
+
+        def docs_batch_update_body(requests:, suggest: false, write_mode: nil)
+          body = { requests: Array(requests) }
+          mode = docs_write_mode(suggest: suggest, write_mode: write_mode)
+          body[:writeControl] = { writeMode: mode } if mode
+          body
+        end
+
+        def docs_write_mode(suggest: false, write_mode: nil)
+          raw = write_mode.to_s.strip
+          if !raw.empty?
+            mode = raw.upcase
+            raise "write_mode must be EDIT or SUGGEST" unless %w[EDIT SUGGEST].include?(mode)
+
+            return mode == "EDIT" ? nil : mode
+          end
+
+          truthy_suggest?(suggest) ? "SUGGEST" : nil
+        end
+
+        def truthy_suggest?(value)
+          value == true || %w[1 true yes on].include?(value.to_s.downcase)
         end
 
         def with_drive_shared_support(service, resources, method, params)

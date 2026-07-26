@@ -46,6 +46,7 @@ In Docker, CLI config lives under `./data/cli/gws`. MadCP also stores credential
 About **18** tools, including:
 
 - Typed Docs / Sheets / Drive helpers (Drive defaults to shared-drive-friendly flags: `supportsAllDrives`, etc.)
+- `googleworkspace_doc_batch_update` — Docs `batchUpdate`; set `suggest=true` or `write_mode=SUGGEST` for collaborative suggestion mode instead of direct edits
 - `googleworkspace_discover` / `googleworkspace_schema`
 - `googleworkspace_api_read` — read-ish Discovery methods
 - `googleworkspace_api_call` — any Discovery method (`write: true`)
