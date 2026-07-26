@@ -10,6 +10,7 @@ services:
     volumes:
       # All durable MADCP state on the host under ./data
       - ./data:/app/data
+      - ./logs:/app/logs
       - ./data/cli/basecamp:/home/madcp/.config/basecamp
       - ./data/cli/basecamp-cache:/home/madcp/.cache/basecamp
       - ./data/cli/hey:/home/madcp/.config/hey-cli

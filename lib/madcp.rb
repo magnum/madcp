@@ -6,6 +6,7 @@ require_relative "madcp/integration"
 require_relative "madcp/registry"
 require_relative "madcp/renderer"
 require_relative "madcp/oauth_provider"
+require_relative "madcp/request_logger"
 require_relative "madcp/app"
 
 module Madcp

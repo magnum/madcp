@@ -16,13 +16,18 @@ module Madcp
       end
       oauth_retrieval_states = {}
       oauth_retrieval_mutex = Mutex.new
+      request_logger = RequestLogger.new(
+        path: config.request_log_path,
+        io: $stdout,
+        max_chars: config.request_log_max_chars,
+      )
 
       Class.new(self) do
         set :environment, :production
         set :server, :puma
         set :bind, config.host
         set :port, config.port
-        set :logging, true
+        set :logging, false
         set :show_exceptions, false
         set :host_authorization, permitted_hosts: []
         set :oauth_retrieval_states, oauth_retrieval_states
@@ -33,6 +38,7 @@ module Madcp
         define_method(:providers) { providers }
         define_method(:oauth_retrieval_states) { oauth_retrieval_states }
         define_method(:oauth_retrieval_mutex) { oauth_retrieval_mutex }
+        define_method(:request_logger) { request_logger }
       end
     end
 
@@ -184,12 +190,63 @@ module Madcp
       rescue JSON::ParserError, NoMethodError
         { content: [{ type: "text", text: response.to_s }] }
       end
+
+      def capture_request_body
+        input = request.body
+        return "" unless input
+
+        data = input.read
+        input.rewind if input.respond_to?(:rewind)
+        data.to_s
+      rescue StandardError
+        ""
+      end
+
+      def response_body_for_log
+        body = response.body
+        body = body.join if body.is_a?(Array)
+        body.to_s
+      rescue StandardError
+        ""
+      end
+
+      def log_request!
+        path = request.fullpath.to_s
+        return if path == "/healthz" || path.start_with?("/healthz?")
+
+        started = env["madcp.request_started_at"]
+        duration_ms =
+          if started
+            ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+          else
+            0
+          end
+
+        request_logger.log(
+          ip: request.ip,
+          method: request.request_method,
+          path: path,
+          status: response.status,
+          duration_ms: duration_ms,
+          user_agent: request.user_agent,
+          request_body: env["madcp.request_body"],
+          response_body: response_body_for_log,
+        )
+      rescue StandardError => e
+        warn("[madcp] request logging skipped: #{e.class}: #{e.message}")
+      end
     end
 
     before do
+      env["madcp.request_started_at"] = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      env["madcp.request_body"] = capture_request_body
       require_operator_basic_auth! if operator_ui_request?
       verify_transport! if request.path_info.include?("/mcp") ||
                            request.path_info.match?(%r{/servers/[^/]+/tools/})
+    end
+
+    after do
+      log_request!
     end
 
     get "/" do

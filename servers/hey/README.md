@@ -32,6 +32,8 @@ Credentials are stored via the HEY CLI config volume (`./data/cli/hey` in Docker
 
 About **30** tools (mailboxes, threads, compose/reply, calendars, todos, habits, journal, auth/config helpers). Mutations are `write: true` and gated by `HEY_ALLOW_WRITE`.
 
+For `hey_compose` / `hey_reply`, prefer the `paragraphs` array. MadCP converts plain text to simple HTML before calling the HEY CLI so line breaks are not collapsed by Action Text.
+
 ## Files
 
 - `server.rb` — MCP tools and auth form

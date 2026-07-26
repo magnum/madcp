@@ -1,15 +1,19 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
 ENV["MADCP_AUTH_USERNAME"] = "admin"
 ENV["MADCP_AUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
+ENV["MADCP_REQUEST_LOG"] = File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
 
 require "base64"
 require "minitest/autorun"
 require "rack/mock"
+require "stringio"
 require "uri"
 require_relative "../server"
 
@@ -26,6 +30,45 @@ class AppTest < Minitest::Test
     response = @request.get("/servers/", "HTTP_HOST" => "localhost")
     assert_equal 401, response.status
     assert_includes response["WWW-Authenticate"].to_s, "Basic"
+  end
+
+  def test_requests_are_logged_to_file_and_stdout
+    log_path = ENV.fetch("MADCP_REQUEST_LOG")
+    File.write(log_path, "")
+    stdout = StringIO.new
+    logger = Madcp::RequestLogger.new(path: log_path, io: stdout, max_chars: 2_000)
+
+    logger.log(
+      ip: "203.0.113.9",
+      method: "POST",
+      path: "/servers/toggltrack/mcp",
+      status: 200,
+      duration_ms: 12,
+      user_agent: "test-agent",
+      request_body: JSON.generate(method: "tools/call", params: { name: "toggltrack_me" }),
+      response_body: JSON.generate(result: { access_token: "secret-value", ok: true }),
+    )
+
+    file_line = File.read(log_path).lines.last.to_s
+    out_line = stdout.string.lines.last.to_s
+
+    assert_includes file_line, "madcp.request"
+    assert_includes file_line, "ip=203.0.113.9"
+    assert_includes file_line, "method=POST"
+    assert_includes file_line, "path=/servers/toggltrack/mcp"
+    refute_includes file_line, "response="
+    assert_includes out_line, "response="
+    assert_includes out_line, "[REDACTED]"
+    refute_includes out_line, "secret-value"
+
+    before = File.size(log_path)
+    response = @request.get(
+      "/servers/?format=json",
+      { "HTTP_HOST" => "localhost", "HTTP_ACCEPT" => "application/json" }.merge(basic_auth),
+    )
+    assert_equal 200, response.status
+    assert File.size(log_path) > before
+    assert_includes File.read(log_path), "/servers/?format=json"
   end
 
   def test_layout_uses_shared_header_footer_partials

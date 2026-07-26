@@ -3,7 +3,8 @@
 module Madcp
   class Config
     attr_reader :root, :host, :port, :public_url, :allowed_hosts, :allowed_origins,
-                :auth_username, :auth_password, :static_bearer, :allow_write_methods
+                :auth_username, :auth_password, :static_bearer, :allow_write_methods,
+                :request_log_path, :request_log_max_chars
 
     def initialize(root:)
       @root = root
@@ -33,6 +34,11 @@ module Madcp
       @allowed_origins = derived_origins if @allowed_origins.empty?
       @allowed_origins << @public_url unless @public_url.empty?
       @allowed_origins.uniq!
+      @request_log_path = ENV.fetch(
+        "MADCP_REQUEST_LOG",
+        File.join(@root, "logs", "requests.logs"),
+      )
+      @request_log_max_chars = ENV.fetch("MADCP_REQUEST_LOG_MAX_CHARS", "8000").to_i
     end
 
     def validate!

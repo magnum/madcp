@@ -64,6 +64,15 @@ For each `<server_id>`:
 - `GET /healthz` — health and auth status
 - `GET /logout` — Basic Auth sign-out challenge for the operator UI
 
+## Request logging
+
+Every HTTP request (except `/healthz`) is logged:
+
+- **File** — `logs/requests.logs` (override with `MADCP_REQUEST_LOG`): timestamp, IP, method, path, status, duration, user-agent, request body
+- **Stdout** — same fields plus the response body (secrets redacted; bodies truncated via `MADCP_REQUEST_LOG_MAX_CHARS`, default `8000`)
+
+With Docker Compose, `./logs` is bind-mounted to `/app/logs`.
+
 MCP client URLs look like:
 
 ```text

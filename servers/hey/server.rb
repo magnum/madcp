@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "cgi"
 require_relative "hey_client"
 
 module Madcp
@@ -24,6 +25,8 @@ module Madcp
         def instructions
           "Use HEY tools to read and manage email and personal productivity data. " \
             "Call hey_skill before complex workflows. " \
+            "For hey_compose / hey_reply prefer the paragraphs array (one idea per item); " \
+            "MadCP converts bodies to HTML so line breaks survive in HEY. " \
             "Write tools are disabled unless allow_write_methods is enabled."
         end
 
@@ -88,7 +91,47 @@ module Madcp
           define_write_tools
         end
 
+        # HEY/Action Text renders content as HTML: plain newlines collapse to spaces.
+        # Convert MCP plain text / paragraphs into simple Trix-friendly HTML.
+        def format_hey_email_body(message: nil, paragraphs: nil)
+          parts = hey_email_paragraphs(message: message, paragraphs: paragraphs)
+          return "" if parts.empty?
+
+          joined = parts.join("\n\n")
+          return joined if hey_html_body?(joined)
+
+          parts.map { |part| "<div>#{hey_escape_with_breaks(part)}</div>" }.join
+        end
+
         private
+
+        def hey_email_paragraphs(message: nil, paragraphs: nil)
+          if paragraphs.is_a?(Array) && !paragraphs.empty?
+            return paragraphs.map { |part| normalize_hey_newlines(part.to_s).strip }.reject(&:empty?)
+          end
+
+          text = normalize_hey_newlines(message.to_s).strip
+          return [] if text.empty?
+          return [text] if hey_html_body?(text)
+
+          chunks = text.split(/\n[[:blank:]]*\n+/).map(&:strip).reject(&:empty?)
+          chunks.empty? ? [text] : chunks
+        end
+
+        def normalize_hey_newlines(text)
+          cleaned = text.to_s.gsub("\r\n", "\n").gsub("\r", "\n")
+          # Models sometimes send the two-character sequence \n instead of a real newline.
+          cleaned = cleaned.gsub("\\n", "\n") if !cleaned.include?("\n") && cleaned.include?("\\n")
+          cleaned
+        end
+
+        def hey_html_body?(text)
+          text.match?(/\A\s*</)
+        end
+
+        def hey_escape_with_breaks(text)
+          CGI.escapeHTML(text.to_s).gsub("\n", "<br>")
+        end
 
         def current_hey_token
           return "" unless auth_status[:authenticated]
@@ -283,26 +326,59 @@ module Madcp
         def define_write_tools
           define_tool(
             name: "hey_compose",
-            description: "Compose and send an email.",
+            description: "Compose and send an email. Prefer paragraphs (array) so line breaks are preserved in HEY.",
             properties: {
               subject: string_prop("Email subject"),
-              message: string_prop("Email body"),
+              paragraphs: array_prop(
+                "Preferred email body: one paragraph/list item/signature per element. " \
+                "Joined with blank lines and converted to HTML for HEY.",
+              ),
+              message: string_prop(
+                "Email body as a single string (use real newlines or \\n between paragraphs). " \
+                "Prefer paragraphs when the email has more than one short sentence.",
+              ),
               to: string_prop("Comma-separated recipients"),
               cc: string_prop("Comma-separated CC recipients"),
               bcc: string_prop("Comma-separated BCC recipients"),
               thread_id: string_prop("Optional thread ID"),
             },
-            required: %w[subject message],
+            required: ["subject"],
             write: true,
-          ) { |**args| cli_response(@client, @client.compose(**args)) }
+          ) do |subject:, paragraphs: nil, message: nil, to: nil, cc: nil, bcc: nil, thread_id: nil|
+            body = format_hey_email_body(message: message, paragraphs: paragraphs)
+            raise "message or paragraphs is required" if body.empty?
+
+            cli_response(
+              @client,
+              @client.compose(
+                subject: subject,
+                message: body,
+                to: to,
+                cc: cc,
+                bcc: bcc,
+                thread_id: thread_id,
+              ),
+            )
+          end
 
           define_tool(
             name: "hey_reply",
-            description: "Reply to a HEY thread.",
-            properties: { topic_id: string_prop("Topic ID"), message: string_prop("Reply body") },
-            required: %w[topic_id message],
+            description: "Reply to a HEY thread. Prefer paragraphs (array) so line breaks are preserved in HEY.",
+            properties: {
+              topic_id: string_prop("Topic ID"),
+              paragraphs: array_prop(
+                "Preferred reply body: one paragraph/list item/signature per element.",
+              ),
+              message: string_prop("Reply body as a single string; prefer paragraphs for multi-paragraph replies"),
+            },
+            required: ["topic_id"],
             write: true,
-          ) { |topic_id:, message:| cli_response(@client, @client.reply(topic_id, message)) }
+          ) do |topic_id:, paragraphs: nil, message: nil|
+            body = format_hey_email_body(message: message, paragraphs: paragraphs)
+            raise "message or paragraphs is required" if body.empty?
+
+            cli_response(@client, @client.reply(topic_id, body))
+          end
 
           %w[seen unseen].each do |action|
             define_tool(
