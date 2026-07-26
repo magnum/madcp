@@ -26,6 +26,10 @@ class TogglTrackTest < Minitest::Test
         { status: 200, headers: {}, body: { "ok" => true, "path" => path } }
       end
     end
+
+    def request(method, path, **options)
+      public_send(method, path, **options.except(:raise_on_error))
+    end
   end
 
   def setup
@@ -106,6 +110,71 @@ class TogglTrackTest < Minitest::Test
     assert_equal "madcp", options.dig(:body, "created_with")
   ensure
     ENV["TOGGLTRACK_ALLOW_WRITE"] = old
+  end
+
+  def test_auth_status_reports_missing_token_without_network
+    old = ENV["TOGGLTRACK_TOKEN"]
+    ENV.delete("TOGGLTRACK_TOKEN")
+    @integration.instance_variable_set(:@client, Madcp::Servers::TogglTrack::Client.new)
+    @integration.invalidate_auth_status!
+    status = @integration.auth_status(force: true)
+
+    refute status[:authenticated]
+    assert_includes status[:error], "not configured"
+  ensure
+    if old
+      ENV["TOGGLTRACK_TOKEN"] = old
+    else
+      ENV.delete("TOGGLTRACK_TOKEN")
+    end
+  end
+
+  def test_auth_status_prefers_workspace_probe_over_me
+    calls = []
+    client = Object.new
+    client.define_singleton_method(:request) do |method, path, **options|
+      calls << [method, path, options]
+      { status: 200, headers: {}, body: { "id" => 99, "name" => "Main" } }
+    end
+    @integration.instance_variable_set(:@client, client)
+    @integration.invalidate_auth_status!
+
+    status = @integration.auth_status(force: true)
+
+    assert status[:authenticated]
+    assert_equal "workspace", status[:probe]
+    assert_equal "Main", status[:workspace_name]
+    assert_equal [[:get, "/workspaces/99", { raise_on_error: false }]], calls
+  end
+
+  def test_auth_status_falls_back_to_me_without_workspace
+    old = ENV["TOGGLTRACK_WORKSPACE_ID"]
+    ENV.delete("TOGGLTRACK_WORKSPACE_ID")
+    calls = []
+    client = Object.new
+    client.define_singleton_method(:request) do |method, path, **options|
+      calls << [method, path, options]
+      {
+        status: 200,
+        headers: {},
+        body: { "email" => "a@example.com", "fullname" => "Ada", "default_workspace_id" => 1 },
+      }
+    end
+    @integration.instance_variable_set(:@client, client)
+    @integration.invalidate_auth_status!
+
+    status = @integration.auth_status(force: true)
+
+    assert status[:authenticated]
+    assert_equal "me", status[:probe]
+    assert_equal "a@example.com", status[:email]
+    assert_equal [[:get, "/me", { raise_on_error: false }]], calls
+  ensure
+    if old
+      ENV["TOGGLTRACK_WORKSPACE_ID"] = old
+    else
+      ENV.delete("TOGGLTRACK_WORKSPACE_ID")
+    end
   end
 
   def test_net_http_client_uses_basic_auth_token_without_network

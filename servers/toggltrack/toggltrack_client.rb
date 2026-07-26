@@ -21,11 +21,13 @@ module Madcp
         class Error < StandardError; end
 
         def initialize(
-          token: ENV["TOGGLTRACK_TOKEN"],
+          token: nil,
           timeout: ENV.fetch("TOGGLTRACK_TIMEOUT", "30").to_i,
           max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i
         )
-          @token = token.to_s
+          # nil means "read TOGGLTRACK_TOKEN from ENV on each request" so status
+          # checks and tools always see credentials saved after boot.
+          @token_override = token
           @timeout = timeout.positive? ? timeout : 30
           @max_chars = max_chars.positive? ? max_chars : 12_000
         end
@@ -37,7 +39,8 @@ module Madcp
         def delete(path, body: nil, query: {}) = request(:delete, path, query: query, body: body)
 
         def request(method, path, query: {}, body: nil, headers: {}, raise_on_error: true)
-          raise Error, "Toggl Track API token is not configured" if @token.empty?
+          token = api_token
+          raise Error, "Toggl Track API token is not configured" if token.empty?
           raise Error, "request body must be a JSON object" if body && !body.is_a?(Hash)
 
           uri = URI.join("#{API_BASE}/", path.to_s.sub(%r{\A/+}, ""))
@@ -53,7 +56,7 @@ module Madcp
           http_request = request_class.new(uri)
           http_request["Accept"] = "application/json"
           http_request["Content-Type"] = "application/json" if body
-          http_request["Authorization"] = "Basic #{Base64.strict_encode64("#{@token}:api_token")}"
+          http_request["Authorization"] = "Basic #{Base64.strict_encode64("#{token}:api_token")}"
           headers.each { |key, value| http_request[key.to_s] = value.to_s }
           http_request.body = JSON.generate(body) if body
 
@@ -76,6 +79,11 @@ module Madcp
         end
 
         private
+
+        def api_token
+          raw = @token_override.nil? ? ENV["TOGGLTRACK_TOKEN"] : @token_override
+          Madcp.sanitize_env_value(raw)
+        end
 
         def response_result(response)
           raw = response.body.to_s

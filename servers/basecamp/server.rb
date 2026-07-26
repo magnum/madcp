@@ -66,7 +66,7 @@ module Madcp
           ]
         end
 
-        def auth_status
+        def fetch_auth_status
           raw = @client.run(@client.auth_status, truncate: false)
           data = JSON.parse(raw)
           data = data["data"] || data
@@ -93,7 +93,7 @@ module Madcp
           }
           persist_credentials!(updates)
           @client = Client.new
-          return true if auth_status[:authenticated]
+          return true if auth_status(force: true)[:authenticated]
 
           persist_credentials!(
             "BASECAMP_TOKEN" => old_token,

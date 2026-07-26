@@ -7,9 +7,7 @@
       <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl"><%= h integration.display_name %></h1>
     </div>
     <% status = integration.auth_status %>
-    <span class="w-fit shrink-0 whitespace-nowrap rounded-full border px-4 py-2 font-semibold <%= status[:authenticated] ? "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100" : "border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100" %>">
-      <%= status[:authenticated] ? "Authenticated" : "Not authenticated" %>
-    </span>
+    <%= partial("auth_status", status: status, server_id: integration.id) %>
   </div>
 
   <% if error %>

@@ -71,7 +71,9 @@ module Madcp
           ]
         end
 
-        def auth_status
+        def auth_status_cache_ttl = 120
+
+        def fetch_auth_status
           result = @client.get("/user/companies")
           {
             authenticated: result[:status].between?(200, 299),
@@ -95,7 +97,7 @@ module Madcp
           }
           persist_credentials!(updates)
           @client = Client.new
-          return true if auth_status[:authenticated]
+          return true if auth_status(force: true)[:authenticated]
 
           persist_credentials!(old)
           @client = Client.new
@@ -117,7 +119,7 @@ module Madcp
             ),
           )
           @client = Client.new
-          raise "Fatture in Cloud token was rejected" unless auth_status[:authenticated]
+          raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
 
           true
         end
@@ -138,7 +140,7 @@ module Madcp
             ),
           )
           @client = Client.new
-          raise "Fatture in Cloud token was rejected" unless auth_status[:authenticated]
+          raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
 
           true
         end

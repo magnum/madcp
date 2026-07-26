@@ -34,6 +34,10 @@ Toggl returns `api_token` fields in cleartext on some profile/workspace payloads
 | `TOGGLTRACK_ALLOW_WRITE` | Enable write tools |
 | `TOGGLTRACK_TIMEOUT` | HTTP timeout seconds (default `30`) |
 
+## Auth status
+
+The operator UI badge probes `GET /workspaces/:id` when `TOGGLTRACK_WORKSPACE_ID` is set (workspace/org API quota). It falls back to `GET /me` only if no workspace is configured (`/me` is capped at ~30 req/hour). MadCP caches the probe for 10 minutes; the refresh button forces a new check.
+
 ## Tools
 
 About **22** tools. Workspace-scoped calls use `TOGGLTRACK_WORKSPACE_ID` when the argument is omitted. Mutations are gated by `TOGGLTRACK_ALLOW_WRITE`.

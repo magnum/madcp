@@ -45,6 +45,8 @@ module Madcp
       @tools = []
       @resources = []
       @configured = false
+      @auth_status_cache = nil
+      @auth_status_cached_at = nil
       FileUtils.mkdir_p(data_dir)
       load_credentials!
     end
@@ -142,7 +144,33 @@ module Madcp
     def instructions = "#{display_name} MCP integration."
     def auth_fields = []
     def auth_help_content = nil
-    def auth_status = { authenticated: false }
+
+    # Public auth status with optional TTL cache. Servers implement the probe in
+    # fetch_auth_status; MadCP decides when to reuse a previous result.
+    # Pass force: true (manual refresh / credential save) to bypass the cache.
+    def auth_status(force: false)
+      ttl = auth_status_cache_ttl.to_i
+      unless force
+        cached = read_auth_status_cache(ttl)
+        return cached if cached
+      end
+
+      status = fetch_auth_status
+      write_auth_status_cache(status, ttl)
+      status
+    end
+
+    def invalidate_auth_status!
+      @auth_status_cache = nil
+      @auth_status_cached_at = nil
+    end
+
+    # Seconds to reuse a successful/failed probe. 0 disables caching.
+    def auth_status_cache_ttl = 0
+
+    # Live provider/CLI check. Override in each integration.
+    def fetch_auth_status = { authenticated: false }
+
     def apply_credentials(_params) = raise(NotImplementedError)
     def clear_credentials! = raise(NotImplementedError)
     def configure_tools = raise(NotImplementedError)
@@ -247,6 +275,7 @@ module Madcp
           perm: 0o600,
         )
       end
+      invalidate_auth_status!
     end
 
     def sanitize_credential_env!
@@ -276,6 +305,23 @@ module Madcp
 
       configure_tools
       @configured = true
+    end
+
+    def read_auth_status_cache(ttl)
+      return nil unless ttl.positive?
+      return nil unless @auth_status_cache && @auth_status_cached_at
+
+      age = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @auth_status_cached_at
+      return nil if age >= ttl
+
+      @auth_status_cache
+    end
+
+    def write_auth_status_cache(status, ttl)
+      return unless ttl.positive?
+
+      @auth_status_cache = status
+      @auth_status_cached_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
   end
 end

@@ -130,7 +130,7 @@ class FattureInCloudTest < Minitest::Test
         "expires_in" => 3600,
       },
     }
-    @integration.define_singleton_method(:auth_status) { { authenticated: true } }
+    @integration.define_singleton_method(:auth_status) { |force: false| { authenticated: true } }
 
     assert @integration.apply_oauth_result!(payload)
     assert_equal "access-from-oauth", ENV["FATTUREINCLOUD_TOKEN"]
@@ -238,7 +238,7 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
     attr_reader :exchange_params
 
-    def auth_status = { authenticated: false }
+    def fetch_auth_status = { authenticated: false }
     def auth_fields = []
     def apply_credentials(_params) = true
     def clear_credentials! = nil

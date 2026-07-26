@@ -1,0 +1,41 @@
+<%
+  ok = status[:authenticated]
+  detail =
+    if ok
+      [status[:email], status[:fullname], status[:workspace_name], status[:account_id], status[:source]]
+        .compact.map(&:to_s).reject(&:empty?).first
+    else
+      status[:error]
+    end
+  badge_ok = "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100"
+  badge_bad = "border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+%>
+<div class="flex flex-col items-start gap-2 sm:items-end"
+     data-auth-status
+     data-server-id="<%= h server_id %>"
+     data-badge-ok="<%= badge_ok %>"
+     data-badge-bad="<%= badge_bad %>">
+  <div class="flex items-center gap-2">
+    <span
+      data-auth-badge
+      class="w-fit shrink-0 whitespace-nowrap rounded-full border px-4 py-2 font-semibold <%= ok ? badge_ok : badge_bad %>">
+      <%= ok ? "Authenticated" : "Not authenticated" %>
+    </span>
+    <button
+      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-300 bg-stone-50 text-stone-950 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+      type="button"
+      data-auth-refresh
+      aria-label="Refresh authentication status"
+      title="Refresh authentication status">
+      <svg class="h-5 w-5" data-auth-refresh-icon viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+        <path d="M21 3v6h-6" />
+      </svg>
+    </button>
+  </div>
+  <p
+    data-auth-detail
+    class="max-w-xs text-right text-sm leading-6 text-stone-600 dark:text-zinc-400 <%= detail ? "" : "hidden" %>">
+    <%= h detail.to_s %>
+  </p>
+</div>

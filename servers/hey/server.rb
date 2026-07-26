@@ -54,7 +54,7 @@ module Madcp
           }]
         end
 
-        def auth_status
+        def fetch_auth_status
           raw = @client.run(@client.auth_status, truncate: false)
           data = JSON.parse(raw)
           data = data["data"] || data
@@ -66,7 +66,8 @@ module Madcp
         def apply_credentials(params)
           token = params["hey_token"].to_s.strip
           @client.run(@client.auth_login(token), truncate: false) unless token.empty?
-          raise "HEY CLI is not authenticated" unless auth_status[:authenticated]
+          invalidate_auth_status!
+          raise "HEY CLI is not authenticated" unless auth_status(force: true)[:authenticated]
 
           true
         ensure
@@ -75,7 +76,9 @@ module Madcp
 
         def clear_credentials!
           @client.run(@client.auth_logout, truncate: false)
+          invalidate_auth_status!
         rescue CliError
+          invalidate_auth_status!
           nil
         end
 

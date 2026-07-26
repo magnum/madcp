@@ -34,11 +34,17 @@ module Madcp
             ],
             commands: [
               {
-                label: "Verify the token against /me",
+                label: "Verify the token against the configured workspace (preferred; uses workspace quota)",
+                value: 'curl -u "$TOGGLTRACK_TOKEN:api_token" ' \
+                       '"https://api.track.toggl.com/api/v9/workspaces/$TOGGLTRACK_WORKSPACE_ID"',
+              },
+              {
+                label: "Fallback user probe (scarce /me quota — 30 req/hour)",
                 value: 'curl -u "$TOGGLTRACK_TOKEN:api_token" https://api.track.toggl.com/api/v9/me',
               },
             ],
             note: "Organization ID and workspace ID are stored as defaults for workspace-scoped tools. " \
+                  "Auth status prefers a workspace probe when TOGGLTRACK_WORKSPACE_ID is set. " \
                   "Treat the API token as a password and paste it only over HTTPS.",
           }
         end
@@ -72,22 +78,24 @@ module Madcp
           ]
         end
 
-        def auth_status
-          result = @client.get("/me")
-          body = result[:body].is_a?(Hash) ? result[:body] : {}
-          {
-            authenticated: result[:status].between?(200, 299),
-            email: body["email"],
-            fullname: body["fullname"],
-            default_workspace_id: body["default_workspace_id"],
-            organization_id: ENV["TOGGLTRACK_ORGANIZATION_ID"],
-            workspace_id: ENV["TOGGLTRACK_WORKSPACE_ID"],
-          }
+        # Prefer workspace probe (plan quota) over /me (30 req/hour user quota).
+        def auth_status_cache_ttl = 600
+
+        def fetch_auth_status
+          load_credentials!
+          organization_id = Madcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"])
+          workspace_id = Madcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"])
+
+          if workspace_id.empty?
+            probe_me(organization_id: organization_id, workspace_id: workspace_id)
+          else
+            probe_workspace(workspace_id, organization_id: organization_id)
+          end
         rescue StandardError => e
           {
             authenticated: false,
-            organization_id: ENV["TOGGLTRACK_ORGANIZATION_ID"],
-            workspace_id: ENV["TOGGLTRACK_WORKSPACE_ID"],
+            organization_id: Madcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"]),
+            workspace_id: Madcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"]),
             error: e.message,
           }
         end
@@ -105,7 +113,7 @@ module Madcp
           }
           persist_credentials!(updates)
           @client = Client.new
-          return true if auth_status[:authenticated]
+          return true if auth_status(force: true)[:authenticated]
 
           persist_credentials!(old)
           @client = Client.new
@@ -467,6 +475,44 @@ module Madcp
               "/workspaces/#{workspace_id_value(workspace_id)}/time_entries/#{path_id(time_entry_id, "time_entry_id")}",
             )
           end
+        end
+
+        def probe_workspace(workspace_id, organization_id:)
+          result = @client.request(:get, "/workspaces/#{workspace_id}", raise_on_error: false)
+          body = result[:body].is_a?(Hash) ? result[:body] : {}
+          ok = result[:status].between?(200, 299)
+          status = {
+            authenticated: ok,
+            probe: "workspace",
+            workspace_id: workspace_id,
+            organization_id: organization_id,
+            workspace_name: body["name"],
+          }
+          unless ok
+            detail = body.is_a?(Hash) ? (body["error"] || body["message"] || body) : body
+            status[:error] = "Toggl Track API #{result[:status]}: #{detail}"
+          end
+          status
+        end
+
+        def probe_me(organization_id:, workspace_id:)
+          result = @client.request(:get, "/me", raise_on_error: false)
+          body = result[:body].is_a?(Hash) ? result[:body] : {}
+          ok = result[:status].between?(200, 299)
+          status = {
+            authenticated: ok,
+            probe: "me",
+            email: body["email"],
+            fullname: body["fullname"],
+            default_workspace_id: body["default_workspace_id"],
+            organization_id: organization_id,
+            workspace_id: workspace_id,
+          }
+          unless ok
+            detail = body.is_a?(Hash) ? (body["error"] || body["message"] || body) : body
+            status[:error] = "Toggl Track API #{result[:status]}: #{detail}"
+          end
+          status
         end
 
         def organization_id_value(value = nil)

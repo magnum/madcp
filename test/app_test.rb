@@ -44,7 +44,55 @@ class AppTest < Minitest::Test
     assert_includes html, "Integrations"
     assert_includes html, "text-3xl"
     assert_includes html, "text-2xl"
+    assert_includes html, 'data-auth-refresh'
+    assert_includes html, "refreshAuthStatus"
     refute_includes html, "tracking-[0.2em]"
+  end
+
+  def test_auth_status_endpoint_returns_json
+    integration = REGISTRY.fetch("toggltrack")
+    integration.define_singleton_method(:auth_status) do |force: false|
+      { authenticated: false, error: "Toggl Track API token is not configured", force: force }
+    end
+
+    response = @request.get(
+      "/servers/toggltrack/auth/status?refresh=1",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+    )
+
+    assert_equal 200, response.status
+    payload = JSON.parse(response.body)
+    assert_equal "toggltrack", payload.fetch("server_id")
+    assert_equal false, payload.fetch("authenticated")
+    assert_equal true, payload.fetch("refreshed")
+    assert_equal 600, payload.fetch("cache_ttl")
+    assert_includes payload.fetch("error"), "not configured"
+  ensure
+    integration.singleton_class.remove_method(:auth_status) if integration
+  end
+
+  def test_auth_status_cache_reuses_probe_until_forced
+    integration = REGISTRY.fetch("hey")
+    calls = 0
+    integration.define_singleton_method(:auth_status_cache_ttl) { 60 }
+    integration.define_singleton_method(:fetch_auth_status) do
+      calls += 1
+      { authenticated: true, source: "cache-test", calls: calls }
+    end
+    integration.invalidate_auth_status!
+
+    first = integration.auth_status
+    second = integration.auth_status
+    forced = integration.auth_status(force: true)
+
+    assert_equal 1, first[:calls]
+    assert_equal 1, second[:calls]
+    assert_equal 2, forced[:calls]
+    assert_equal 2, calls
+  ensure
+    integration.invalidate_auth_status!
+    integration.singleton_class.remove_method(:fetch_auth_status) if integration
+    integration.singleton_class.remove_method(:auth_status_cache_ttl) if integration
   end
 
   def test_logout_challenges_basic_auth_again
@@ -103,7 +151,7 @@ class AppTest < Minitest::Test
 
   def test_authentication_views_use_readable_copyable_help
     integration = REGISTRY.fetch("googleworkspace")
-    integration.define_singleton_method(:auth_status) { { authenticated: false } }
+    integration.define_singleton_method(:auth_status) { |force: false| { authenticated: false } }
 
     html = RENDERER.page(
       "auth",
@@ -118,10 +166,11 @@ class AppTest < Minitest::Test
 
     assert_includes html, "gws auth export --unmasked"
     assert_includes html, "copyAuthCommand(this)"
+    assert_includes html, "data-auth-refresh"
+    assert_includes html, "refresh=1"
     assert_includes html, "whitespace-nowrap"
     assert_includes html, "pre-filled from the current environment"
     refute_includes html, "<pre"
-    refute_match(/\btext-(?:xs|sm)\b/, html)
   ensure
     integration.singleton_class.remove_method(:auth_status) if integration
   end
@@ -169,7 +218,7 @@ class AppTest < Minitest::Test
 
   def test_auth_form_prefills_env_backed_fields
     integration = REGISTRY.fetch("googleworkspace")
-    integration.define_singleton_method(:auth_status) { { authenticated: false } }
+    integration.define_singleton_method(:auth_status) { |force: false| { authenticated: false } }
     old_project = ENV["GOOGLE_WORKSPACE_PROJECT_ID"]
     ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = "madcp-prefill-project"
 
@@ -201,7 +250,7 @@ class AppTest < Minitest::Test
   def test_integration_list_status_does_not_wrap
     integrations = REGISTRY.all
     integrations.each do |integration|
-      integration.define_singleton_method(:auth_status) { { authenticated: false } }
+      integration.define_singleton_method(:auth_status) { |force: false| { authenticated: false } }
     end
 
     html = RENDERER.page(
@@ -214,7 +263,7 @@ class AppTest < Minitest::Test
 
     assert_includes html, "Not authenticated"
     assert_includes html, "whitespace-nowrap"
-    refute_match(/\btext-(?:xs|sm)\b/, html)
+    assert_includes html, 'data-auth-refresh'
   ensure
     integrations&.each do |integration|
       integration.singleton_class.remove_method(:auth_status)

@@ -86,7 +86,7 @@ module Madcp
           ]
         end
 
-        def auth_status
+        def fetch_auth_status
           raw = @client.auth_status
           parsed = parse_gws_json(raw)
           data = parsed["data"] || parsed
@@ -150,7 +150,7 @@ module Madcp
           end
           persist_credentials!(updates)
           @client = Client.new
-          status = auth_status
+          status = auth_status(force: true)
           unless status[:authenticated]
             raise authentication_failure_message(status)
           end

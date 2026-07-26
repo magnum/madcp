@@ -315,6 +315,17 @@ module Madcp
       )
     end
 
+    get "/servers/:server_id/auth/status" do
+      force = %w[1 true yes].include?(params["refresh"].to_s.downcase)
+      status = integration.auth_status(force: force)
+      json(
+        server_id: integration.id,
+        cache_ttl: integration.auth_status_cache_ttl.to_i,
+        refreshed: force,
+        **status,
+      )
+    end
+
     post "/servers/:server_id/auth/credentials" do
       integration.apply_credentials(params)
       content_type :html

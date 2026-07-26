@@ -4,6 +4,58 @@
     try { localStorage.setItem("madcp-theme", isDark ? "dark" : "light"); } catch (_error) {}
   });
 
+  async function refreshAuthStatus(button) {
+    const root = button.closest("[data-auth-status]");
+    if (!root) return;
+
+    const serverId = root.dataset.serverId;
+    const badge = root.querySelector("[data-auth-badge]");
+    const detail = root.querySelector("[data-auth-detail]");
+    const icon = root.querySelector("[data-auth-refresh-icon]");
+    button.disabled = true;
+    if (icon) icon.classList.add("animate-spin");
+
+    try {
+      const response = await fetch(
+        `/servers/${encodeURIComponent(serverId)}/auth/status?refresh=1`,
+        {
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        },
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const status = await response.json();
+      const ok = !!status.authenticated;
+      badge.textContent = ok ? "Authenticated" : "Not authenticated";
+      badge.className = `w-fit shrink-0 whitespace-nowrap rounded-full border px-4 py-2 font-semibold ${
+        ok ? root.dataset.badgeOk : root.dataset.badgeBad
+      }`;
+      const detailText = ok
+        ? [status.email, status.fullname, status.workspace_name, status.account_id, status.source]
+          .filter(Boolean)[0]
+        : status.error;
+      if (detailText) {
+        detail.textContent = detailText;
+        detail.classList.remove("hidden");
+      } else {
+        detail.textContent = "";
+        detail.classList.add("hidden");
+      }
+    } catch (error) {
+      if (detail) {
+        detail.textContent = `Refresh failed: ${error.message || error}`;
+        detail.classList.remove("hidden");
+      }
+    } finally {
+      button.disabled = false;
+      if (icon) icon.classList.remove("animate-spin");
+    }
+  }
+
+  document.querySelectorAll("[data-auth-refresh]").forEach((button) => {
+    button.addEventListener("click", () => refreshAuthStatus(button));
+  });
+
   async function copyAuthCommand(button) {
     const source = button.closest("[data-command]").querySelector("code, textarea");
     const command = source.value || source.textContent;
