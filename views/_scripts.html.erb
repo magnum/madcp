@@ -9,7 +9,8 @@
     if (!root) return;
 
     const serverId = root.dataset.serverId;
-    const badge = root.querySelector("[data-auth-badge]");
+    const badgeOk = root.querySelector("[data-auth-badge-ok]");
+    const badgeBad = root.querySelector("[data-auth-badge-bad]");
     const detail = root.querySelector("[data-auth-detail]");
     const icon = root.querySelector("[data-auth-refresh-icon]");
     button.disabled = true;
@@ -26,20 +27,10 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const status = await response.json();
       const ok = !!status.authenticated;
-      const label = ok ? "Authenticated" : "Not authenticated";
-      const badgeOk = badge.querySelector("[data-auth-badge-ok]");
-      const badgeBad = badge.querySelector("[data-auth-badge-bad]");
-      const badgeLabel = badge.querySelector("[data-auth-badge-label]");
-      if (badgeOk) badgeOk.classList.toggle("hidden", !ok);
-      if (badgeBad) badgeBad.classList.toggle("hidden", ok);
-      if (badgeLabel) badgeLabel.textContent = label;
-      badge.setAttribute("aria-label", label);
-      badge.setAttribute("title", label);
-      badge.className = `inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-semibold md:w-auto md:px-4 ${
-        ok ? root.dataset.badgeOk : root.dataset.badgeBad
-      }`;
+      badgeOk.classList.toggle("hidden", !ok);
+      badgeBad.classList.toggle("hidden", ok);
       const detailText = ok
-        ? [status.email, status.fullname, status.workspace_name, status.account_id, status.source]
+        ? [status.email, status.username, status.workspace_name, status.account_id, status.source]
           .filter(Boolean)[0]
         : status.error;
       if (detailText) {

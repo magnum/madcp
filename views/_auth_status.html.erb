@@ -7,47 +7,33 @@
     else
       status[:error]
     end
-  badge_ok = "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100"
-  badge_bad = "border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+  badge_base = "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-semibold md:w-auto md:px-4"
   show_actions = defined?(actions) ? actions : false
 %>
 <div class="flex shrink-0 flex-col items-end gap-2"
      data-auth-status
-     data-server-id="<%= h server_id %>"
-     data-badge-ok="<%= badge_ok %>"
-     data-badge-bad="<%= badge_bad %>">
+     data-server-id="<%= h server_id %>">
   <div class="flex flex-nowrap items-center justify-end gap-2">
     <span
-      data-auth-badge
-      class="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-semibold md:w-auto md:px-4 <%= ok ? badge_ok : badge_bad %>"
-      aria-label="<%= ok ? "Authenticated" : "Not authenticated" %>"
-      title="<%= ok ? "Authenticated" : "Not authenticated" %>">
-      <svg
-        data-auth-badge-ok
-        class="h-5 w-5 shrink-0 <%= ok ? "" : "hidden" %>"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true">
+      data-auth-badge-ok
+      class="<%= badge_base %> border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100 <%= ok ? "" : "hidden" %>"
+      aria-label="Authenticated"
+      title="Authenticated">
+      <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M9 12.75 11.25 15 15 9.75" />
         <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
       </svg>
-      <svg
-        data-auth-badge-bad
-        class="h-5 w-5 shrink-0 <%= ok ? "hidden" : "" %>"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true">
+      <span class="hidden md:inline">Authenticated</span>
+    </span>
+    <span
+      data-auth-badge-bad
+      class="<%= badge_base %> border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 <%= ok ? "hidden" : "" %>"
+      aria-label="Not authenticated"
+      title="Not authenticated">
+      <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
       </svg>
-      <span data-auth-badge-label class="hidden md:inline"><%= ok ? "Authenticated" : "Not authenticated" %></span>
+      <span class="hidden md:inline">Not authenticated</span>
     </span>
     <button
       class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-stone-50 text-stone-950 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"

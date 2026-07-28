@@ -169,7 +169,9 @@ class AppTest < Minitest::Test
     assert_includes html, 'href="/servers/hey/tools"'
     assert_includes html, "data-auth-badge-ok"
     assert_includes html, "data-auth-badge-bad"
-    assert_includes html, "data-auth-badge-label"
+    refute_includes html, "data-auth-badge-label"
+    refute_includes html, "data-badge-ok"
+    refute_includes html, "data-badge-bad"
     assert_includes html, "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-semibold md:w-auto md:px-4"
     refute_includes html, "whitespace-nowrap rounded-full border px-4 py-2"
     refute_includes html, "tracking-[0.2em]"
