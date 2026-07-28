@@ -113,7 +113,7 @@ TWITTER_ALLOW_WRITE=false
 
 ```bash
 cp .env.example .env
-# Edit MADCP_PUBLIC_URL, MADCP_AUTH_USERNAME/PASSWORD, allowed hosts/origins, write flags.
+# Edit MADCP_PUBLIC_URL, data/auth_tokens, allowed hosts/origins, write flags.
 docker compose up --build -d
 # or, on the host after changes:
 ./update_and_restart.sh
@@ -128,7 +128,7 @@ MADCP_HOST_PORT=8877
 Durable state is bind-mounted from `./data` (gitignored):
 
 ```text
-./data/                  → /app/data          (integration credentials, MCP OAuth store)
+./data/                  → /app/data          (auth_tokens, integration credentials, MCP OAuth store)
 ./data/cli/basecamp      → Basecamp CLI config
 ./data/cli/basecamp-cache
 ./data/cli/hey
@@ -139,22 +139,40 @@ The image builds the Basecamp, HEY, and Google Workspace CLIs.
 
 ## Authentication
 
-### Operator UI (HTTP Basic Auth)
+MadCP has **two independent auth planes**:
 
-HTML operator pages (`/servers/`, `/auth`, OAuth callback UI, logout) require HTTP Basic Auth:
+1. **App auth** — operator UI + optional static MCP Bearer (`data/auth_tokens`)
+2. **MCP OAuth** — Claude Custom Connectors get their own access/refresh tokens under `data/_oauth/<server_id>.json`
 
-```dotenv
-MADCP_AUTH_USERNAME=admin
-MADCP_AUTH_PASSWORD=change-me
+Changing app tokens does **not** revoke already-issued MCP OAuth tokens. External provider OAuth (Fatture, Twitter, …) is separate again (`data/<server_id>/`).
+
+### App tokens (`data/auth_tokens`)
+
+```bash
+cp auth_tokens.example data/auth_tokens
+chmod 600 data/auth_tokens
+# edit: one token per line →  TOKEN # label
+# disable a token by commenting the line →  # TOKEN # label
 ```
 
-MCP protocol endpoints (`/mcp`, token/register/metadata) are **not** behind Basic Auth — they use MadCP OAuth / bearer tokens for Claude and other MCP clients.
+Example:
 
-Because the browser is already authenticated with Basic Auth, integration auth forms no longer ask for a MadCP username/password. Use **Sign out** in the footer to challenge Basic Auth again (browser-dependent).
+```text
+tok_live_abc123 # claude-desktop
+tok_live_def456 # cowork
+# tok_old_revoked # disabled
+```
+
+- **Operator UI** (browser): HTTP Basic Auth — username is ignored; **password = token**
+- **MCP / curl**: `Authorization: Bearer <token>` on `/servers/<id>/mcp` and `/servers/<id>/tools/...`
+- File is reloaded when its mtime changes (no restart needed)
+- Optional bootstrap: `MADCP_AUTH_TOKEN` is merged with the file
+
+`MADCP_AUTH_USERNAME` / `MADCP_AUTH_PASSWORD` are no longer used.
 
 ### MCP clients (Claude Custom Connectors)
 
-Each integration is its own OAuth issuer (`/servers/<id>`). MadCP supports authorization code + PKCE, refresh tokens, revocation, dynamic client registration, protected-resource metadata, and an optional static `MADCP_AUTH_TOKEN`.
+Each integration is its own OAuth issuer (`/servers/<id>`). MadCP supports authorization code + PKCE, refresh tokens, revocation, dynamic client registration, and protected-resource metadata. You can also call MCP with a static Bearer from `auth_tokens`.
 
 MCP OAuth clients and tokens are persisted under `data/_oauth/<server_id>.json`, so restarting the container does not force Claude to re-authenticate. Short-lived auth codes and login states stay in memory.
 
@@ -163,7 +181,6 @@ If updating integration credentials fails while Claude is waiting, use **Continu
 Auth form fields are pre-filled from the current environment / stored credentials. Values loaded from `.env` / `credentials.env` are trimmed; anything from `#` onward (including `# optional` / `# required` placeholders) is stripped at boot and whenever credentials are read.
 
 Per-integration credential setup is documented in each server README linked [above](#integrations).
-
 ## Live code editing (Docker)
 
 For day-to-day work on integrations, copy the Compose override so `servers/`, `lib/`, and `views/` are bind-mounted and the process can restart without a full image rebuild:

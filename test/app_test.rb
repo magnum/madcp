@@ -3,14 +3,13 @@
 require "tmpdir"
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
-ENV["MADCP_AUTH_USERNAME"] = "admin"
-ENV["MADCP_AUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
 ENV["MADCP_REQUEST_LOG"] = File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
 
 require "base64"
+require "fileutils"
 require "minitest/autorun"
 require "rack/mock"
 require "stringio"
@@ -22,7 +21,7 @@ class AppTest < Minitest::Test
     @request = Rack::MockRequest.new(APP)
   end
 
-  def basic_auth(username = "admin", password = "secret")
+  def basic_auth(username = "operator", password = "static-test-token")
     { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
   end
 
@@ -30,6 +29,49 @@ class AppTest < Minitest::Test
     response = @request.get("/servers/", "HTTP_HOST" => "localhost")
     assert_equal 401, response.status
     assert_includes response["WWW-Authenticate"].to_s, "Basic"
+  end
+
+  def test_operator_ui_accepts_bearer_from_auth_token
+    response = @request.get(
+      "/servers/?format=json",
+      "HTTP_HOST" => "localhost",
+      "HTTP_AUTHORIZATION" => "Bearer static-test-token",
+    )
+    assert_equal 200, response.status
+  end
+
+  def test_operator_ui_basic_auth_uses_token_as_password_username_ignored
+    response = @request.get(
+      "/servers/?format=json",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth("anything", "static-test-token")),
+    )
+    assert_equal 200, response.status
+  end
+
+  def test_auth_token_store_parses_labels_and_disabled_lines
+    dir = Dir.mktmpdir
+    path = File.join(dir, "auth_tokens")
+    File.write(
+      path,
+      <<~TOKENS,
+        live-token-one # desktop
+        # revoked-token # old
+        live-token-two # cowork
+      TOKENS
+    )
+    store = Madcp::AuthTokenStore.new(path: path)
+    assert store.valid?("live-token-one")
+    assert store.valid?("live-token-two")
+    refute store.valid?("revoked-token")
+    assert_equal "desktop", store.lookup("live-token-one").label
+
+    File.write(path, "live-token-one # desktop\n# live-token-two # cowork\n")
+    # bump mtime
+    File.utime(Time.now + 2, Time.now + 2, path)
+    assert store.valid?("live-token-one")
+    refute store.valid?("live-token-two")
+  ensure
+    FileUtils.remove_entry(dir) if dir
   end
 
   def test_requests_are_logged_to_file_and_stdout

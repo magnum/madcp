@@ -144,7 +144,7 @@ module Madcp
         @auth_codes[code] = state_data.merge(
           code: code,
           expires_at: Time.now.to_i + AUTH_CODE_TTL,
-          subject: @config.auth_username,
+          subject: "operator",
         )
       end
       values = { code: code }
@@ -163,9 +163,9 @@ module Madcp
 
     def load_access_token(token)
       return nil if token.to_s.empty?
-      if !@config.static_bearer.empty? && secure_equals(token, @config.static_bearer)
-        return { subject: "static-bearer", expires_at: nil }
-      end
+
+      entry = @config.auth_token_store.lookup(token)
+      return { subject: entry.label, expires_at: nil } if entry
 
       @mutex.synchronize do
         data = @access_tokens[token]

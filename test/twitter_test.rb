@@ -3,8 +3,6 @@
 require "tmpdir"
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
-ENV["MADCP_AUTH_USERNAME"] = "admin"
-ENV["MADCP_AUTH_PASSWORD"] = "secret"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
