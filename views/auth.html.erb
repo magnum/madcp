@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-3xl">
+<div>
   <a class="font-medium underline decoration-stone-400 underline-offset-4 hover:decoration-stone-950 dark:decoration-zinc-600 dark:hover:decoration-zinc-100"
      href="/servers/">← All integrations</a>
   <div class="mt-8 flex flex-col gap-5 border-b border-stone-300 pb-8 dark:border-zinc-700 sm:flex-row sm:items-end sm:justify-between">
@@ -28,7 +28,7 @@
     <section class="mt-10 border-b border-stone-300 pb-8 dark:border-zinc-700" aria-labelledby="auth-help-title">
       <h2 class="text-2xl font-bold" id="auth-help-title"><%= h auth_help[:title] %></h2>
       <% if auth_help[:description] %>
-        <p class="mt-3 max-w-2xl leading-7 text-stone-700 dark:text-zinc-300"><%= h auth_help[:description] %></p>
+        <p class="mt-3 leading-7 text-stone-700 dark:text-zinc-300"><%= h auth_help[:description] %></p>
       <% end %>
       <% if auth_help[:steps]&.any? %>
         <ol class="mt-6 space-y-3">
