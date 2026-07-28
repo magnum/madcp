@@ -167,7 +167,10 @@ class AppTest < Minitest::Test
     assert_includes html, "flex flex-nowrap items-center justify-end gap-2"
     assert_includes html, 'href="/servers/hey/auth"'
     assert_includes html, 'href="/servers/hey/tools"'
-    assert_includes html, "inline-flex h-10 w-fit shrink-0 items-center whitespace-nowrap rounded-lg border px-3 font-semibold md:px-4"
+    assert_includes html, "data-auth-badge-ok"
+    assert_includes html, "data-auth-badge-bad"
+    assert_includes html, "data-auth-badge-label"
+    assert_includes html, "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-semibold md:w-auto md:px-4"
     refute_includes html, "whitespace-nowrap rounded-full border px-4 py-2"
     refute_includes html, "tracking-[0.2em]"
   end
