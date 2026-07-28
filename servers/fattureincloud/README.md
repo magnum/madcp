@@ -52,15 +52,26 @@ Optional: set a default `FATTUREINCLOUD_COMPANY_ID` for company-scoped tools.
 | `FATTUREINCLOUD_TOKEN` | Access token (auth form / OAuth callback) |
 | `FATTUREINCLOUD_REFRESH_TOKEN` | Refresh token (auto-used on 401; persisted from OAuth) |
 | `FATTUREINCLOUD_COMPANY_ID` | Default company for scoped tools |
-| `FATTUREINCLOUD_OAUTH_SCOPES` | Override default read scopes |
-| `FATTUREINCLOUD_ALLOW_WRITE` | Enable write tools |
+| `FATTUREINCLOUD_OAUTH_SCOPES` | Override default OAuth scopes (space-separated) |
+| `FATTUREINCLOUD_ALLOW_WRITE` | Enable write tools (`true` required for create/modify/delete) |
 | `FATTUREINCLOUD_TIMEOUT` | HTTP timeout seconds (default `30`) |
 
-Default scopes (least privilege, read):
+Default OAuth scopes are set in MadCP’s authorize URL — not in Fatture in Cloud’s “Utenti e Permessi” (that page is for sub-users). After changing scopes, **re-run Retrieve OAuth token**; the existing token keeps the old whitelist.
+
+Write access needs **both**:
+1. OAuth scopes with `:a` (below)
+2. `FATTUREINCLOUD_ALLOW_WRITE=true` (MadCP gate)
 
 ```text
-entity.clients:r entity.suppliers:r issued_documents.invoices:r archive:r
+entity.clients:a entity.suppliers:a
+issued_documents.invoices:a issued_documents.credit_notes:a
+issued_documents.quotes:a issued_documents.proformas:a
+issued_documents.self_invoices:a
+archive:a
+received_documents:r situation:r taxes:r cashbook:r calendar:r
 ```
+
+Document mutations use the existing tools (`fattureincloud_issued_document_create` / `_modify`, clients/suppliers create/modify, etc.). For autofatture, call issued-document tools with `type` / payload for self invoices (`self_invoice`).
 
 ## Tools
 

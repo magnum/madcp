@@ -9,11 +9,28 @@ module Madcp
       class Server < Integration
         server_id "fattureincloud"
         display_name "Fatture in Cloud"
-        description "Companies, archive documents, invoices, clients, and suppliers through the Fatture in Cloud v2 API."
+        description "Companies, archive documents, invoices, self-invoices, clients, and suppliers through the Fatture in Cloud v2 API."
         version "0.1.0"
         oauth_token_retrieval true
 
-        DEFAULT_SCOPES = "entity.clients:r entity.suppliers:r issued_documents.invoices:r archive:r"
+        # :a = full write on that resource (create/modify/delete). :r = read-only.
+        # MadCP write tools still require FATTUREINCLOUD_ALLOW_WRITE=true.
+        # Override with FATTUREINCLOUD_OAUTH_SCOPES if needed; re-authorize after changes.
+        DEFAULT_SCOPES = [
+          "entity.clients:a",
+          "entity.suppliers:a",
+          "issued_documents.invoices:a",
+          "issued_documents.credit_notes:a",
+          "issued_documents.quotes:a",
+          "issued_documents.proformas:a",
+          "issued_documents.self_invoices:a",
+          "received_documents:r",
+          "situation:r",
+          "taxes:r",
+          "cashbook:r",
+          "calendar:r",
+          "archive:a",
+        ].join(" ")
         LIST_PROPERTIES = {
           fields: { type: "string", description: "Comma-separated response fields" },
           fieldset: { type: "string", description: "Named response fieldset" },
