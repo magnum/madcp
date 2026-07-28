@@ -113,7 +113,7 @@ TWITTER_ALLOW_WRITE=false
 
 ```bash
 cp .env.example .env
-# Edit MADCP_PUBLIC_URL, data/auth_tokens, allowed hosts/origins, write flags.
+# Edit MADCP_PUBLIC_URL, MADCP_SECRET_KEY, data/auth_tokens, data/auth_users, allowed hosts/origins, write flags.
 docker compose up --build -d
 # or, on the host after changes:
 ./update_and_restart.sh
@@ -128,7 +128,7 @@ MADCP_HOST_PORT=8877
 Durable state is bind-mounted from `./data` (gitignored):
 
 ```text
-./data/                  → /app/data          (auth_tokens, integration credentials, MCP OAuth store)
+./data/                  → /app/data          (auth_tokens, auth_users, integration credentials, MCP OAuth store)
 ./data/cli/basecamp      → Basecamp CLI config
 ./data/cli/basecamp-cache
 ./data/cli/hey
@@ -141,21 +141,36 @@ The image builds the Basecamp, HEY, and Google Workspace CLIs.
 
 MadCP has **two independent auth planes**:
 
-1. **App auth** — operator UI + optional static MCP Bearer (`data/auth_tokens`)
+1. **App auth** — operator UI + optional static MCP Bearer
 2. **MCP OAuth** — Claude Custom Connectors get their own access/refresh tokens under `data/_oauth/<server_id>.json`
 
-Changing app tokens does **not** revoke already-issued MCP OAuth tokens. External provider OAuth (Fatture, Twitter, …) is separate again (`data/<server_id>/`).
+Changing app tokens/users does **not** revoke already-issued MCP OAuth tokens. External provider OAuth (Fatture, Twitter, …) is separate again (`data/<server_id>/`).
 
-### App tokens (`data/auth_tokens`)
+### App auth (`data/auth_users` + `data/auth_tokens`)
+
+| Mechanism | File | Header |
+|-----------|------|--------|
+| Username / password | `data/auth_users` | `Authorization: Basic …` |
+| Static bearer | `data/auth_tokens` | `Authorization: Bearer <token>` |
+
+Password digests in `auth_users` are `HMAC-SHA256(MADCP_SECRET_KEY, password)` (hex). Set `MADCP_SECRET_KEY` (or `SECRET_KEY`) in `.env`.
 
 ```bash
+cp auth_users.example data/auth_users
 cp auth_tokens.example data/auth_tokens
-chmod 600 data/auth_tokens
-# edit: one token per line →  TOKEN # label
-# disable a token by commenting the line →  # TOKEN # label
+chmod 600 data/auth_users data/auth_tokens
+# add MADCP_SECRET_KEY to .env, then:
+MADCP_SECRET_KEY=... ruby scripts/hash_auth_password.rb user1 'your-password' >> data/auth_users
 ```
 
-Example:
+Example `auth_users`:
+
+```text
+user1:a1b2c3…64hex… # primary
+# olduser:deadbeef… # disabled
+```
+
+Example `auth_tokens`:
 
 ```text
 tok_live_abc123 # claude-desktop
@@ -163,12 +178,10 @@ tok_live_def456 # cowork
 # tok_old_revoked # disabled
 ```
 
-- **Operator UI** (browser): HTTP Basic Auth — username is ignored; **password = token**
-- **MCP / curl**: `Authorization: Bearer <token>` on `/servers/<id>/mcp` and `/servers/<id>/tools/...`
-- File is reloaded when its mtime changes (no restart needed)
-- Optional bootstrap: `MADCP_AUTH_TOKEN` is merged with the file
-
-`MADCP_AUTH_USERNAME` / `MADCP_AUTH_PASSWORD` are no longer used.
+- **Operator UI** (browser): HTTP Basic Auth with `auth_users`, or Bearer from `auth_tokens`
+- **MCP / curl**: Bearer from `auth_tokens` (or MadCP-issued OAuth access tokens)
+- Both files reload when their mtime changes (no restart needed)
+- Optional bootstrap token: `MADCP_AUTH_TOKEN` is merged into the token store
 
 ### MCP clients (Claude Custom Connectors)
 

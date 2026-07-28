@@ -1,12 +1,12 @@
-# MadCP app auth tokens (operator UI + static MCP Bearer).
+# MadCP app auth tokens (static MCP Bearer + optional operator Bearer).
 # Active line:   <token> # <label>
 # Disable line:  # <token> # <label>
 #
 # Copy to data/auth_tokens (gitignored) and chmod 600.
 # Reload is automatic when the file mtime changes — no restart required.
 #
-# Browser UI: HTTP Basic Auth — username ignored, password = token
 # MCP / API:  Authorization: Bearer <token>
+# Operator UI also accepts Bearer; username/password Basic Auth uses data/auth_users.
 # Claude OAuth-issued tokens in data/_oauth/ keep working independently.
 
 replace-me-with-a-long-random-token # default-operator

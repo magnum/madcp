@@ -97,17 +97,16 @@ module Madcp
       end
 
       def require_operator_basic_auth!
-        # Prefer Bearer from data/auth_tokens (or MADCP_AUTH_TOKEN).
+        # Bearer → data/auth_tokens (static app tokens).
         token = bearer_token
         return if token && config.auth_token_store.valid?(token)
 
-        # Browser-friendly Basic Auth: username is ignored; password must be a
-        # valid MadCP app token from auth_tokens.
+        # Basic Auth → data/auth_users (username + password, HMAC with MADCP_SECRET_KEY).
         header = request.env["HTTP_AUTHORIZATION"].to_s
         if header.start_with?("Basic ")
           decoded = Base64.decode64(header.delete_prefix("Basic ")).force_encoding("UTF-8")
-          _username, password = decoded.split(":", 2)
-          return if config.auth_token_store.valid?(password)
+          username, password = decoded.split(":", 2)
+          return if config.auth_user_store.valid?(username, password)
         end
 
         headers["WWW-Authenticate"] = 'Basic realm="MadCP"'

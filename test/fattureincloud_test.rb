@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 require "tmpdir"
+require "openssl"
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
+ENV["MADCP_SECRET_KEY"] = "test-secret-key"
+ENV["MADCP_AUTH_USERS_PATH"] = File.join(Dir.tmpdir, "madcp-auth-users-#{Process.pid}")
+File.write(ENV["MADCP_AUTH_USERS_PATH"], "user1:" + OpenSSL::HMAC.hexdigest("SHA256", "test-secret-key", "secret") + " # test\n")
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
 ENV["MADCP_REQUEST_LOG"] ||= File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
@@ -12,6 +16,7 @@ require "base64"
 require "minitest/autorun"
 require "rack/mock"
 require "tmpdir"
+require "openssl"
 require "uri"
 require_relative "../server"
 
@@ -500,7 +505,7 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
   private
 
-  def basic_auth(username = "operator", password = "static-test-token")
+  def basic_auth(username = "user1", password = "secret")
     { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
   end
 

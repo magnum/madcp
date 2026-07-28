@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 require "tmpdir"
+require "openssl"
 
 ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
 ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
+ENV["MADCP_SECRET_KEY"] = "test-secret-key"
+ENV["MADCP_AUTH_USERS_PATH"] = File.join(Dir.tmpdir, "madcp-auth-users-#{Process.pid}")
+File.write(ENV["MADCP_AUTH_USERS_PATH"], "user1:" + OpenSSL::HMAC.hexdigest("SHA256", "test-secret-key", "secret") + " # test\n")
 ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 ENV["MADCP_ALLOW_WRITE"] = "false"
 ENV["MADCP_REQUEST_LOG"] = File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
@@ -21,7 +25,7 @@ class AppTest < Minitest::Test
     @request = Rack::MockRequest.new(APP)
   end
 
-  def basic_auth(username = "operator", password = "static-test-token")
+  def basic_auth(username = "user1", password = "secret")
     { "HTTP_AUTHORIZATION" => "Basic #{Base64.strict_encode64("#{username}:#{password}")}" }
   end
 
@@ -40,12 +44,20 @@ class AppTest < Minitest::Test
     assert_equal 200, response.status
   end
 
-  def test_operator_ui_basic_auth_uses_token_as_password_username_ignored
+  def test_operator_ui_basic_auth_validates_auth_users
     response = @request.get(
       "/servers/?format=json",
-      { "HTTP_HOST" => "localhost" }.merge(basic_auth("anything", "static-test-token")),
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth("user1", "secret")),
     )
     assert_equal 200, response.status
+  end
+
+  def test_operator_ui_rejects_token_as_basic_password
+    response = @request.get(
+      "/servers/?format=json",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth("user1", "static-test-token")),
+    )
+    assert_equal 401, response.status
   end
 
   def test_auth_token_store_parses_labels_and_disabled_lines
@@ -70,6 +82,20 @@ class AppTest < Minitest::Test
     File.utime(Time.now + 2, Time.now + 2, path)
     assert store.valid?("live-token-one")
     refute store.valid?("live-token-two")
+  ensure
+    FileUtils.remove_entry(dir) if dir
+  end
+
+  def test_auth_user_store_validates_hmac_and_disabled_lines
+    dir = Dir.mktmpdir
+    path = File.join(dir, "auth_users")
+    secret = "pepper"
+    digest = Madcp::AuthUserStore.hash_password("hunter2", secret: secret)
+    File.write(path, "alice:#{digest} # alice\n# bob:#{digest} # bob\n")
+    store = Madcp::AuthUserStore.new(path: path, secret: secret)
+    assert store.valid?("alice", "hunter2")
+    refute store.valid?("alice", "wrong")
+    refute store.valid?("bob", "hunter2")
   ensure
     FileUtils.remove_entry(dir) if dir
   end
