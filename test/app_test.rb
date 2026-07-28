@@ -164,9 +164,10 @@ class AppTest < Minitest::Test
     assert_includes html, 'data-auth-refresh'
     assert_includes html, "refreshAuthStatus"
     assert_includes html, "hidden md:inline"
+    assert_includes html, "flex flex-nowrap items-center justify-end gap-2"
     assert_includes html, 'href="/servers/hey/auth"'
     assert_includes html, 'href="/servers/hey/tools"'
-    assert_includes html, "inline-flex h-10 w-fit shrink-0 items-center whitespace-nowrap rounded-lg border px-4 font-semibold"
+    assert_includes html, "inline-flex h-10 w-fit shrink-0 items-center whitespace-nowrap rounded-lg border px-3 font-semibold md:px-4"
     refute_includes html, "whitespace-nowrap rounded-full border px-4 py-2"
     refute_includes html, "tracking-[0.2em]"
   end

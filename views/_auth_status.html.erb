@@ -11,15 +11,15 @@
   badge_bad = "border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
   show_actions = defined?(actions) ? actions : false
 %>
-<div class="flex flex-col items-start gap-2 sm:items-end"
+<div class="flex shrink-0 flex-col items-end gap-2"
      data-auth-status
      data-server-id="<%= h server_id %>"
      data-badge-ok="<%= badge_ok %>"
      data-badge-bad="<%= badge_bad %>">
-  <div class="flex flex-wrap items-center gap-2 <%= show_actions ? "sm:justify-end" : "" %>">
+  <div class="flex flex-nowrap items-center justify-end gap-2">
     <span
       data-auth-badge
-      class="inline-flex h-10 w-fit shrink-0 items-center whitespace-nowrap rounded-lg border px-4 font-semibold <%= ok ? badge_ok : badge_bad %>">
+      class="inline-flex h-10 w-fit shrink-0 items-center whitespace-nowrap rounded-lg border px-3 font-semibold md:px-4 <%= ok ? badge_ok : badge_bad %>">
       <%= ok ? "Authenticated" : "Not authenticated" %>
     </span>
     <button
@@ -34,7 +34,7 @@
       </svg>
     </button>
     <% if show_actions %>
-      <a class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-stone-950 px-3 font-bold text-stone-50 hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 md:px-4 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+      <a class="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-stone-950 font-bold text-stone-50 hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 md:w-auto md:px-4 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
          href="/servers/<%= h server_id %>/auth"
          aria-label="Authentication"
          title="Authentication">
@@ -44,7 +44,7 @@
         </svg>
         <span class="hidden md:inline">Auth</span>
       </a>
-      <a class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-stone-950 px-3 font-bold hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 md:px-4 dark:border-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
+      <a class="inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-stone-950 font-bold hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-950 focus:ring-offset-2 md:w-auto md:px-4 dark:border-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-100 dark:focus:ring-offset-zinc-950"
          href="/servers/<%= h server_id %>/tools"
          aria-label="Tools JSON"
          title="Tools JSON">
