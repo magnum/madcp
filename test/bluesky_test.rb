@@ -130,4 +130,65 @@ class BlueskyTest < Minitest::Test
       ENV.delete("BLUESKY_ALLOW_WRITE")
     end
   end
+
+  def test_create_session_keeps_jwts_unredacted_for_apply_session
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    response.define_singleton_method(:body) do
+      JSON.generate(
+        "did" => "did:plc:abc",
+        "handle" => "alice.bsky.social",
+        "accessJwt" => "access.jwt.token",
+        "refreshJwt" => "refresh.jwt.token",
+      )
+    end
+    response.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+    fake_http = Object.new
+    fake_http.define_singleton_method(:request) { |_request| response }
+
+    old_handle = ENV["BLUESKY_HANDLE"]
+    old_password = ENV["BLUESKY_APP_PASSWORD"]
+    old_access = ENV["BLUESKY_ACCESS_JWT"]
+    old_refresh = ENV["BLUESKY_REFRESH_JWT"]
+    old_did = ENV["BLUESKY_DID"]
+    ENV["BLUESKY_HANDLE"] = "alice.bsky.social"
+    ENV["BLUESKY_APP_PASSWORD"] = "xxxx-xxxx-xxxx-xxxx"
+    ENV.delete("BLUESKY_ACCESS_JWT")
+    ENV.delete("BLUESKY_REFRESH_JWT")
+    ENV.delete("BLUESKY_DID")
+
+    persisted = nil
+    client = Madcp::Servers::Bluesky::Client.new(
+      on_session: lambda { |**kwargs| persisted = kwargs },
+    )
+    original_start = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
+
+    client.create_session!
+
+    assert_equal "access.jwt.token", ENV["BLUESKY_ACCESS_JWT"]
+    assert_equal "refresh.jwt.token", ENV["BLUESKY_REFRESH_JWT"]
+    assert_equal "did:plc:abc", ENV["BLUESKY_DID"]
+    assert_equal "access.jwt.token", persisted[:access_jwt]
+    refute_equal "[REDACTED]", ENV["BLUESKY_ACCESS_JWT"]
+  ensure
+    Net::HTTP.define_singleton_method(:start) do |*args, **kwargs, &block|
+      original_start.call(*args, **kwargs, &block)
+    end if original_start
+    restore = lambda do |key, value|
+      if value
+        ENV[key] = value
+      else
+        ENV.delete(key)
+      end
+    end
+    restore.call("BLUESKY_HANDLE", old_handle)
+    restore.call("BLUESKY_APP_PASSWORD", old_password)
+    restore.call("BLUESKY_ACCESS_JWT", old_access)
+    restore.call("BLUESKY_REFRESH_JWT", old_refresh)
+    restore.call("BLUESKY_DID", old_did)
+  end
 end

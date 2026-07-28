@@ -114,11 +114,13 @@ module Madcp
           }
           persist_credentials!(updates)
           @client = build_client
-          return true if auth_status(force: true)[:authenticated]
+          status = auth_status(force: true)
+          return true if status[:authenticated]
 
+          detail = status[:error].to_s.strip
           persist_credentials!(old)
           @client = build_client
-          raise "Bluesky credentials were rejected"
+          raise detail.empty? ? "Bluesky credentials were rejected" : "Bluesky credentials were rejected: #{detail}"
         ensure
           password = nil
         end

@@ -167,6 +167,7 @@ module Madcp
           account_did = Madcp.sanitize_env_value(body["did"] || body[:did])
           account_handle = Madcp.sanitize_env_value(body["handle"] || body[:handle])
           raise Error, "Bluesky session response missing accessJwt" if access.empty?
+          raise Error, "Bluesky session response accessJwt was redacted" if access == "[REDACTED]"
 
           ENV["BLUESKY_ACCESS_JWT"] = access
           ENV["BLUESKY_REFRESH_JWT"] = refresh unless refresh.empty?
@@ -197,7 +198,8 @@ module Madcp
             read_timeout: @timeout,
             write_timeout: @timeout,
           ) { |http| http.request(http_request) }
-          response_result(response)
+          # Session endpoints return JWTs that apply_session! must persist unredacted.
+          response_result(response, redact: false)
         end
 
         def flatten_query(values)
@@ -210,7 +212,7 @@ module Madcp
           end
         end
 
-        def response_result(response)
+        def response_result(response, redact: true)
           raw = response.body.to_s
           truncated = raw.length > @max_chars
           output = truncated ? "#{raw[0, @max_chars]}\n...[truncated]" : raw
@@ -224,7 +226,7 @@ module Madcp
           {
             status: response.code.to_i,
             headers: response.each_header.to_h.slice(*SAFE_RESPONSE_HEADERS),
-            body: redact_sensitive(parsed),
+            body: redact ? redact_sensitive(parsed) : parsed,
           }
         rescue JSON::ParserError
           {
