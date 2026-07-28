@@ -30,7 +30,12 @@ Operator UI: `/servers/fattureincloud/auth`
    data/fattureincloud/oauth_token.json
    ```
 
-   If auto-save fails, the callback page lets you paste the access token (and optional full JSON) back into MadCP.
+   Access tokens expire in about **24 hours**. On HTTP 401 MadCP automatically exchanges
+   `FATTUREINCLOUD_REFRESH_TOKEN` (~1 year from last refresh) for a new access + refresh pair
+   and persists them. Keep `FATTUREINCLOUD_CLIENT_ID` / `FATTUREINCLOUD_CLIENT_SECRET`
+   configured so refresh can run.
+
+   If auto-save fails, the callback page lets you paste the access token (and optional full JSON including `refresh_token`) back into MadCP.
 
 Optional: set a default `FATTUREINCLOUD_COMPANY_ID` for company-scoped tools.
 
@@ -41,7 +46,7 @@ Optional: set a default `FATTUREINCLOUD_COMPANY_ID` for company-scoped tools.
 | `FATTUREINCLOUD_CLIENT_ID` | OAuth app client ID |
 | `FATTUREINCLOUD_CLIENT_SECRET` | OAuth app client secret |
 | `FATTUREINCLOUD_TOKEN` | Access token (auth form / OAuth callback) |
-| `FATTUREINCLOUD_REFRESH_TOKEN` | Refresh token when persisted from OAuth |
+| `FATTUREINCLOUD_REFRESH_TOKEN` | Refresh token (auto-used on 401; persisted from OAuth) |
 | `FATTUREINCLOUD_COMPANY_ID` | Default company for scoped tools |
 | `FATTUREINCLOUD_OAUTH_SCOPES` | Override default read scopes |
 | `FATTUREINCLOUD_ALLOW_WRITE` | Enable write tools |

@@ -25,11 +25,13 @@ module Madcp
 
         def initialize(config:)
           super
-          @client = Client.new
+          @client = build_client
         end
 
         def instructions
           "Use Fatture in Cloud tools to read company accounting data. " \
+            "Expired access tokens are refreshed automatically when FATTUREINCLOUD_REFRESH_TOKEN " \
+            "and CLIENT_ID/SECRET are configured. " \
             "All mutations accept a raw JSON object and remain disabled unless write methods are enabled."
         end
 
@@ -46,7 +48,9 @@ module Madcp
             ],
             commands: [],
             note: "MadCP stores the full OAuth token response (including refresh_token) under " \
-                  "data/fattureincloud/oauth_token.json. The default company ID is optional.",
+                  "data/fattureincloud/oauth_token.json. Access tokens expire in ~24h; MadCP " \
+                  "refreshes them automatically using the refresh token (valid ~1 year). " \
+                  "The default company ID is optional.",
           }
         end
 
@@ -96,11 +100,11 @@ module Madcp
             "FATTUREINCLOUD_COMPANY_ID" => company_id,
           }
           persist_credentials!(updates)
-          @client = Client.new
+          @client = build_client
           return true if auth_status(force: true)[:authenticated]
 
           persist_credentials!(old)
-          @client = Client.new
+          @client = build_client
           raise "Fatture in Cloud token was rejected"
         ensure
           token = nil
@@ -118,7 +122,7 @@ module Madcp
               body["refresh_token"] || body[:refresh_token],
             ),
           )
-          @client = Client.new
+          @client = build_client
           raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
 
           true
@@ -139,7 +143,7 @@ module Madcp
               payload["refresh_token"] || payload[:refresh_token],
             ),
           )
-          @client = Client.new
+          @client = build_client
           raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
 
           true
@@ -152,7 +156,7 @@ module Madcp
             "FATTUREINCLOUD_COMPANY_ID" => nil,
             "FATTUREINCLOUD_REFRESH_TOKEN" => nil,
           )
-          @client = Client.new
+          @client = build_client
         end
 
         def oauth_call(callback_url:, state:)
@@ -210,6 +214,18 @@ module Madcp
         end
 
         private
+
+        def build_client
+          Client.new(on_token_refresh: method(:persist_refreshed_token!))
+        end
+
+        def persist_refreshed_token!(access_token:, refresh_token:, body:)
+          persist_oauth_token_payload!(body) if body.is_a?(Hash)
+          persist_credentials!(
+            "FATTUREINCLOUD_TOKEN" => access_token,
+            "FATTUREINCLOUD_REFRESH_TOKEN" => refresh_token,
+          )
+        end
 
         def oauth_token_path
           File.join(data_dir, "oauth_token.json")

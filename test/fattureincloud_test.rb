@@ -205,6 +205,98 @@ class FattureInCloudTest < Minitest::Test
     end if original_start
   end
 
+  def test_client_refreshes_access_token_on_401_and_retries
+    unauthorized = Net::HTTPUnauthorized.new("1.1", "401", "Unauthorized")
+    unauthorized.define_singleton_method(:body) { JSON.generate("error" => "expired") }
+    unauthorized.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    refresh_ok = Net::HTTPOK.new("1.1", "200", "OK")
+    refresh_ok.define_singleton_method(:body) do
+      JSON.generate(
+        "access_token" => "a/new-access",
+        "refresh_token" => "r/new-refresh",
+        "token_type" => "bearer",
+        "expires_in" => 86_400,
+      )
+    end
+    refresh_ok.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    success = Net::HTTPOK.new("1.1", "200", "OK")
+    success.define_singleton_method(:body) { JSON.generate("data" => { "id" => 1 }) }
+    success.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    requests = []
+    fake_http = Object.new
+    fake_http.define_singleton_method(:request) do |request|
+      requests << { path: request.uri.path, auth: request["Authorization"], body: request.body }
+      if request.uri.path.end_with?("/oauth/token")
+        refresh_ok
+      elsif requests.count { |item| item[:path].include?("/user/companies") } == 1
+        unauthorized
+      else
+        success
+      end
+    end
+
+    old_token = ENV["FATTUREINCLOUD_TOKEN"]
+    old_refresh = ENV["FATTUREINCLOUD_REFRESH_TOKEN"]
+    old_client_id = ENV["FATTUREINCLOUD_CLIENT_ID"]
+    old_client_secret = ENV["FATTUREINCLOUD_CLIENT_SECRET"]
+    ENV["FATTUREINCLOUD_TOKEN"] = "a/expired"
+    ENV["FATTUREINCLOUD_REFRESH_TOKEN"] = "r/old-refresh"
+    ENV["FATTUREINCLOUD_CLIENT_ID"] = "client-id"
+    ENV["FATTUREINCLOUD_CLIENT_SECRET"] = "client-secret"
+
+    persisted = nil
+    client = Madcp::Servers::FattureInCloud::Client.new(
+      on_token_refresh: lambda { |**kwargs| persisted = kwargs },
+    )
+    original_start = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
+
+    result = client.get("/user/companies")
+
+    assert_equal 200, result[:status]
+    assert_equal 3, requests.length
+    assert_equal "Bearer a/expired", requests[0][:auth]
+    assert_includes requests[1][:path], "/oauth/token"
+    refresh_body = JSON.parse(requests[1][:body])
+    assert_equal "refresh_token", refresh_body.fetch("grant_type")
+    assert_equal "r/old-refresh", refresh_body.fetch("refresh_token")
+    assert_equal "Bearer a/new-access", requests[2][:auth]
+    assert_equal "a/new-access", ENV["FATTUREINCLOUD_TOKEN"]
+    assert_equal "r/new-refresh", ENV["FATTUREINCLOUD_REFRESH_TOKEN"]
+    assert_equal "a/new-access", persisted[:access_token]
+    assert_equal "r/new-refresh", persisted[:refresh_token]
+  ensure
+    Net::HTTP.define_singleton_method(:start) do |*args, **kwargs, &block|
+      original_start.call(*args, **kwargs, &block)
+    end if original_start
+    restore = lambda do |key, value|
+      if value
+        ENV[key] = value
+      else
+        ENV.delete(key)
+      end
+    end
+    restore.call("FATTUREINCLOUD_TOKEN", old_token)
+    restore.call("FATTUREINCLOUD_REFRESH_TOKEN", old_refresh)
+    restore.call("FATTUREINCLOUD_CLIENT_ID", old_client_id)
+    restore.call("FATTUREINCLOUD_CLIENT_SECRET", old_client_secret)
+  end
+
   def test_mcp_tool_call_preserves_fatture_integration_context
     global = REGISTRY.fetch("fattureincloud")
     original_client = global.instance_variable_get(:@client)
