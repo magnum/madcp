@@ -14,8 +14,9 @@ module Madcp
       providers = registry.all.to_h do |integration|
         [integration.id, OAuthProvider.new(config: config, integration: integration)]
       end
-      oauth_retrieval_states = {}
-      oauth_retrieval_mutex = Mutex.new
+      oauth_retrieval_store = OAuthRetrievalStore.new(
+        path: File.join(config.root, "data", "_oauth", "retrieval_states.json"),
+      )
       request_logger = RequestLogger.new(
         path: config.request_log_path,
         io: $stdout,
@@ -30,14 +31,14 @@ module Madcp
         set :logging, false
         set :show_exceptions, false
         set :host_authorization, permitted_hosts: []
-        set :oauth_retrieval_states, oauth_retrieval_states
+        # Kept for tests that inspect in-flight PKCE state.
+        set :oauth_retrieval_store, oauth_retrieval_store
 
         define_method(:config) { config }
         define_method(:registry) { registry }
         define_method(:renderer) { renderer }
         define_method(:providers) { providers }
-        define_method(:oauth_retrieval_states) { oauth_retrieval_states }
-        define_method(:oauth_retrieval_mutex) { oauth_retrieval_mutex }
+        define_method(:oauth_retrieval_store) { oauth_retrieval_store }
         define_method(:request_logger) { request_logger }
       end
     end
@@ -87,8 +88,11 @@ module Madcp
       def operator_ui_request?
         path = request.path_info
         return false if path == "/logout"
+        # Provider OAuth callback is a cross-site redirect; secured by one-time state,
+        # not Basic Auth (browsers often omit credentials on that navigation).
+        return false if path.match?(%r{\A/servers/[^/]+/oauth_callback\z})
         return true if path == "/" || path == "/servers" || path == "/servers/"
-        return true if path.match?(%r{\A/servers/[^/]+/oauth(_callback)?\z})
+        return true if path.match?(%r{\A/servers/[^/]+/oauth\z})
         return false unless path.match?(%r{\A/servers/[^/]+/auth(?:/|\z)})
 
         !path.match?(%r{/auth/(register|token|revoke|authorize)\z})
@@ -140,14 +144,27 @@ module Madcp
       end
 
       def consume_oauth_retrieval_state(state)
-        oauth_retrieval_mutex.synchronize do
-          data = oauth_retrieval_states.delete(state.to_s)
-          return nil unless data
-          return nil unless data[:server_id] == integration.id
-          return nil if data[:expires_at] < Time.now.to_i
+        oauth_retrieval_store.consume(state, server_id: integration.id)
+      end
 
-          data
-        end
+      def oauth_callback_error_page(message, callback_params: nil)
+        status 400
+        content_type :html
+        headers["Cache-Control"] = "no-store"
+        headers["Referrer-Policy"] = "no-referrer"
+        # Always HTML: returning JSON here trips Rack::Protection::JsonCsrf on
+        # cross-site OAuth redirects (Referer from the provider → "Forbidden").
+        renderer.page(
+          "oauth_result",
+          **integration_locals(
+            integration,
+            callback_url: oauth_callback_url,
+            oauth_params: redact_oauth_secrets(callback_params || oauth_query_params),
+            oauth_result: { error: message },
+            token_saved: false,
+            token_save_error: nil,
+          ),
+        )
       end
 
       def oauth_query_params
@@ -408,13 +425,13 @@ module Madcp
 
       # Persist any extra oauth_call fields (e.g. PKCE code_verifier) with the state.
       extra = result.to_h.reject { |key, _| key.to_s == "authorization_url" }
-      oauth_retrieval_mutex.synchronize do
-        oauth_retrieval_states.delete_if { |_, data| data[:expires_at] < Time.now.to_i }
-        oauth_retrieval_states[state] = {
+      oauth_retrieval_store.put(
+        state,
+        {
           server_id: integration.id,
-          expires_at: Time.now.to_i + 300,
-        }.merge(extra.transform_keys(&:to_sym))
-      end
+          expires_at: Time.now.to_i + OAuthRetrievalStore::DEFAULT_TTL,
+        }.merge(extra.transform_keys(&:to_sym)),
+      )
 
       redirect authorization_url, 302
     rescue StandardError => e
@@ -428,7 +445,12 @@ module Madcp
       callback_params = oauth_query_params
       state = callback_params["state"]
       state_data = consume_oauth_retrieval_state(state)
-      halt 400, json({ error: "invalid, expired, or already used OAuth state" }, 400) unless state_data
+      unless state_data
+        halt oauth_callback_error_page(
+          "invalid, expired, or already used OAuth state",
+          callback_params: callback_params,
+        )
+      end
 
       result = nil
       token_saved = false
@@ -461,19 +483,7 @@ module Madcp
         ),
       )
     rescue StandardError => e
-      status 400
-      content_type :html
-      renderer.page(
-        "oauth_result",
-        **integration_locals(
-          integration,
-          callback_url: oauth_callback_url,
-          oauth_params: redact_oauth_secrets(oauth_query_params),
-          oauth_result: { error: e.message },
-          token_saved: false,
-          token_save_error: nil,
-        ),
-      )
+      oauth_callback_error_page(e.message)
     end
 
     post "/servers/:server_id/auth/save_oauth_token" do

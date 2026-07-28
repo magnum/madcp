@@ -24,7 +24,11 @@ Operator UI: `/servers/fattureincloud/auth`
    ```
 
 3. In `/servers/fattureincloud/auth`, choose **Retrieve OAuth token** (you are already signed in with MadCP Basic Auth).
-4. MadCP exchanges the code, can auto-save the access token, and stores the full OAuth JSON (including `refresh_token`) at:
+4. Complete the Fatture consent screen. The browser returns to MadCP’s callback
+   (`/servers/fattureincloud/oauth_callback`). That callback is public (no Basic Auth);
+   security is the one-time `state` stored under `data/_oauth/retrieval_states.json`
+   (survives process reloads; TTL 10 minutes). Do not reuse an old callback URL.
+5. MadCP exchanges the code, can auto-save the access token, and stores the full OAuth JSON (including `refresh_token`) at:
 
    ```text
    data/fattureincloud/oauth_token.json

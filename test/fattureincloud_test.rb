@@ -422,46 +422,82 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
     reused = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "again")}",
-      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+      {
+        "HTTP_HOST" => "localhost",
+        "HTTP_REFERER" => "https://provider.example/authorize",
+      },
     )
     assert_equal 400, reused.status
-    assert_includes reused["content-type"], "application/json"
-    assert_equal "invalid, expired, or already used OAuth state", JSON.parse(reused.body).fetch("error")
+    assert_includes reused["content-type"], "text/html"
+    refute_equal "Forbidden", reused.body.strip
+    assert_includes reused.body, "invalid, expired, or already used OAuth state"
   end
 
   def test_invalid_and_expired_state_are_rejected
     invalid = @request.get(
       "/servers/fake-oauth/oauth_callback?state=not-valid&code=abc",
-      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+      {
+        "HTTP_HOST" => "localhost",
+        "HTTP_REFERER" => "https://api-v2.fattureincloud.it/oauth/authorize",
+      },
     )
     assert_equal 400, invalid.status
-    assert_includes invalid["content-type"], "application/json"
+    assert_includes invalid["content-type"], "text/html"
+    refute_equal "Forbidden", invalid.body.strip
+    assert_includes invalid.body, "invalid, expired, or already used OAuth state"
 
     launch = launch_oauth
     state = URI.decode_www_form(URI(launch["location"]).query).to_h.fetch("state")
-    @app.settings.oauth_retrieval_states.fetch(state)[:expires_at] = Time.now.to_i - 1
+    previous = @app.settings.oauth_retrieval_store.peek(state)
+    @app.settings.oauth_retrieval_store.put(state, previous.merge(expires_at: Time.now.to_i - 1))
     expired = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc")}",
-      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+      { "HTTP_HOST" => "localhost" },
     )
     assert_equal 400, expired.status
+    assert_includes expired.body, "invalid, expired, or already used OAuth state"
   end
 
   def test_oauth_call_extra_fields_are_passed_to_exchange_as_state_data
     launch = launch_oauth
     state = URI.decode_www_form(URI(launch["location"]).query).to_h.fetch("state")
-    stored = @app.settings.oauth_retrieval_states.fetch(state)
+    stored = @app.settings.oauth_retrieval_store.peek(state)
     assert_equal "pkce-verifier-from-oauth-call", stored[:code_verifier]
 
     integration = @registry.fetch("fake-oauth")
     callback = @request.get(
       "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc")}",
-      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+      { "HTTP_HOST" => "localhost" },
     )
 
     assert_equal 200, callback.status
     assert_equal "pkce-verifier-from-oauth-call", integration.exchange_state_data[:code_verifier]
     assert_equal "fake-oauth", integration.exchange_state_data[:server_id]
+  end
+
+  def test_oauth_callback_does_not_require_basic_auth
+    launch = launch_oauth
+    state = URI.decode_www_form(URI(launch["location"]).query).to_h.fetch("state")
+
+    callback = @request.get(
+      "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc")}",
+      "HTTP_HOST" => "localhost",
+    )
+
+    assert_equal 200, callback.status
+    assert_includes callback.body, "access-secret"
+  end
+
+  def test_oauth_retrieval_state_survives_store_reload
+    launch = launch_oauth
+    state = URI.decode_www_form(URI(launch["location"]).query).to_h.fetch("state")
+    path = File.join(@tmpdir, "data", "_oauth", "retrieval_states.json")
+    assert File.file?(path)
+
+    reloaded = Madcp::OAuthRetrievalStore.new(path: path)
+    peeked = reloaded.peek(state)
+    assert_equal "fake-oauth", peeked[:server_id]
+    assert_equal "pkce-verifier-from-oauth-call", peeked[:code_verifier]
   end
 
   private
