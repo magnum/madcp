@@ -94,69 +94,25 @@ module Madcp
         def apply_credentials(params)
           token = Madcp.sanitize_env_value(params["fattureincloud_token"])
           company_id = Madcp.sanitize_env_value(params["fattureincloud_company_id"])
-          old = credential_env_keys.to_h { |key| [key, ENV[key]] }
-          updates = {
-            "FATTUREINCLOUD_TOKEN" => token,
-            "FATTUREINCLOUD_COMPANY_ID" => company_id,
-          }
-          persist_credentials!(updates)
-          @client = build_client
-          return true if auth_status(force: true)[:authenticated]
-
-          persist_credentials!(old)
-          @client = build_client
-          raise "Fatture in Cloud token was rejected"
+          apply_credentials_probe!(
+            {
+              "FATTUREINCLOUD_TOKEN" => token,
+              "FATTUREINCLOUD_COMPANY_ID" => company_id,
+            },
+            rejection_message: "Fatture in Cloud token was rejected",
+          )
         ensure
           token = nil
         end
 
-        def apply_oauth_result!(result)
-          body = oauth_result_body(result)
-          access_token = Madcp.sanitize_env_value(body["access_token"] || body[:access_token])
-          raise "OAuth response did not include an access_token" if access_token.empty?
-
-          persist_oauth_token_payload!(body)
-          persist_credentials!(
-            "FATTUREINCLOUD_TOKEN" => access_token,
-            "FATTUREINCLOUD_REFRESH_TOKEN" => Madcp.sanitize_env_value(
-              body["refresh_token"] || body[:refresh_token],
-            ),
-          )
-          @client = build_client
-          raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
-
-          true
-        end
-
-        def apply_oauth_token_paste!(access_token:, token_json: nil)
-          token = Madcp.sanitize_env_value(access_token)
-          raise "Access token is required" if token.empty?
-
-          payload = parse_token_json_paste(token_json)
-          payload = payload.merge("access_token" => token) if payload
-          payload ||= { "access_token" => token }
-
-          persist_oauth_token_payload!(payload)
-          persist_credentials!(
-            "FATTUREINCLOUD_TOKEN" => token,
-            "FATTUREINCLOUD_REFRESH_TOKEN" => Madcp.sanitize_env_value(
-              payload["refresh_token"] || payload[:refresh_token],
-            ),
-          )
-          @client = build_client
-          raise "Fatture in Cloud token was rejected" unless auth_status(force: true)[:authenticated]
-
-          true
-        end
-
         def clear_credentials!
-          File.delete(oauth_token_path) if File.file?(oauth_token_path)
+          clear_oauth_token_file!
           persist_credentials!(
             "FATTUREINCLOUD_TOKEN" => nil,
             "FATTUREINCLOUD_COMPANY_ID" => nil,
             "FATTUREINCLOUD_REFRESH_TOKEN" => nil,
           )
-          @client = build_client
+          replace_client!
         end
 
         def oauth_call(callback_url:, state:)
@@ -213,6 +169,13 @@ module Madcp
           ]
         end
 
+        def oauth_access_env = "FATTUREINCLOUD_TOKEN"
+        def oauth_refresh_env = "FATTUREINCLOUD_REFRESH_TOKEN"
+
+        def replace_client!
+          @client = build_client
+        end
+
         private
 
         def build_client
@@ -220,48 +183,11 @@ module Madcp
         end
 
         def persist_refreshed_token!(access_token:, refresh_token:, body:)
-          persist_oauth_token_payload!(body) if body.is_a?(Hash)
-          persist_credentials!(
-            "FATTUREINCLOUD_TOKEN" => access_token,
-            "FATTUREINCLOUD_REFRESH_TOKEN" => refresh_token,
+          persist_refreshed_oauth_token!(
+            access_token: access_token,
+            refresh_token: refresh_token,
+            body: body,
           )
-        end
-
-        def oauth_token_path
-          File.join(data_dir, "oauth_token.json")
-        end
-
-        def oauth_result_body(result)
-          raise "Empty OAuth token response" if result.nil?
-
-          body = result.is_a?(Hash) ? (result[:body] || result["body"] || result) : nil
-          raise "OAuth token response body is missing" unless body.is_a?(Hash)
-
-          status = result[:status] || result["status"]
-          if status && !status.to_i.between?(200, 299)
-            raise "OAuth token exchange failed with status #{status}"
-          end
-
-          body
-        end
-
-        def persist_oauth_token_payload!(payload)
-          raise "OAuth token payload must be a JSON object" unless payload.is_a?(Hash)
-
-          FileUtils.mkdir_p(File.dirname(oauth_token_path))
-          File.write(oauth_token_path, JSON.pretty_generate(payload) + "\n", perm: 0o600)
-        end
-
-        def parse_token_json_paste(raw)
-          text = raw.to_s.strip
-          return nil if text.empty?
-
-          parsed = JSON.parse(text)
-          raise "token JSON must be an object" unless parsed.is_a?(Hash)
-
-          parsed
-        rescue JSON::ParserError => e
-          raise "Invalid token JSON: #{e.message}"
         end
 
         def define_company_tools
@@ -381,10 +307,6 @@ module Madcp
 
         def optional_payload(payload)
           payload.nil? ? nil : require_payload(payload)
-        end
-
-        def api_response(result)
-          text_response(JSON.pretty_generate(result))
         end
       end
     end

@@ -101,8 +101,7 @@ module Madcp
                 "ERROR: write method disabled. Set #{integration.id.upcase}_ALLOW_WRITE=true.",
               )
             else
-              allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
-              tool_arguments = arguments.select { |key, _| allowed.include?(key.to_sym) }
+              tool_arguments = integration.send(:filter_tool_arguments, definition, arguments)
               integration.instance_exec(**tool_arguments, &definition.handler)
             end
           rescue StandardError => e
@@ -132,11 +131,7 @@ module Madcp
       raise KeyError, "unknown tool: #{name}" unless definition
       raise SecurityError, "write method disabled" if definition.write && !allow_write_methods?
 
-      allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
-      tool_arguments = arguments.to_h.transform_keys(&:to_sym).select do |key, _|
-        allowed.include?(key)
-      end
-      instance_exec(**tool_arguments, &definition.handler)
+      instance_exec(**filter_tool_arguments(definition, arguments), &definition.handler)
     end
 
     # Integration contract -------------------------------------------------
@@ -179,6 +174,25 @@ module Madcp
     # fields returned by oauth_call and merged by the host).
     def oauth_exchange(callback_url:, params:, state_data: nil) = raise(NotImplementedError)
 
+    def apply_oauth_result!(result)
+      store_oauth_token_payload!(
+        oauth_result_body(result),
+        rejection_message: "#{display_name} token was rejected",
+      )
+    end
+
+    def apply_oauth_token_paste!(access_token:, token_json: nil)
+      token = Madcp.sanitize_env_value(access_token)
+      raise "Access token is required" if token.empty?
+
+      payload = parse_token_json_paste(token_json) || {}
+      payload = payload.merge("access_token" => token)
+      store_oauth_token_payload!(
+        payload,
+        rejection_message: "#{display_name} token was rejected",
+      )
+    end
+
     # Current value for an auth form field. Prefer an explicit :value (string or
     # callable), otherwise the ENV key named by :env.
     def auth_field_value(field)
@@ -219,11 +233,35 @@ module Madcp
       MCP::Tool::Response.new([{ type: "text", text: text.to_s }])
     end
 
+    def api_response(result = nil)
+      payload = block_given? ? yield : result
+      text_response(JSON.pretty_generate(payload))
+    rescue StandardError => e
+      text_response("ERROR: #{e.message}")
+    end
+
     def cli_response(client, args)
       text_response(client.run(args))
     rescue CliError => e
       text_response("ERROR: #{e.message}")
     end
+
+    def object_prop(description)
+      { type: "object", description: description, additionalProperties: true }
+    end
+
+    def compact_hash(values)
+      values.reject { |_, value| value.nil? || value == "" }
+    end
+
+    def stringify_keys(values)
+      values.to_h.transform_keys(&:to_s)
+    end
+
+    def string_prop(description) = { type: "string", description: description }
+    def integer_prop(description) = { type: "integer", description: description }
+    def boolean_prop(description) = { type: "boolean", description: description }
+    def array_prop(description) = { type: "array", items: { type: "string" }, description: description }
 
     def credential_path
       File.join(data_dir, "credentials.env")
@@ -295,12 +333,98 @@ module Madcp
 
     def credential_env_keys = []
 
-    def string_prop(description) = { type: "string", description: description }
-    def integer_prop(description) = { type: "integer", description: description }
-    def boolean_prop(description) = { type: "boolean", description: description }
-    def array_prop(description) = { type: "array", items: { type: "string" }, description: description }
+    # Rebuild HTTP/CLI clients after ENV credentials change. Override in servers.
+    def replace_client!
+    end
+
+    # Persist updates, probe auth, roll back ENV + client on failure.
+    def apply_credentials_probe!(updates, rejection_message:)
+      old = credential_env_keys.to_h { |key| [key, ENV[key]] }
+      persist_credentials!(updates)
+      replace_client!
+      status = auth_status(force: true)
+      return true if status[:authenticated]
+
+      persist_credentials!(old)
+      replace_client!
+      detail = status[:error].to_s.strip
+      raise(detail.empty? ? rejection_message : "#{rejection_message}: #{detail}")
+    end
+
+    # ENV keys for provider OAuth access/refresh tokens (Twitter, Fatture, …).
+    def oauth_access_env = nil
+    def oauth_refresh_env = nil
+
+    def oauth_token_path
+      File.join(data_dir, "oauth_token.json")
+    end
+
+    def clear_oauth_token_file!
+      File.delete(oauth_token_path) if File.file?(oauth_token_path)
+    end
+
+    def oauth_result_body(result)
+      raise "Empty OAuth token response" if result.nil?
+
+      body = result.is_a?(Hash) ? (result[:body] || result["body"] || result) : nil
+      raise "OAuth token response body is missing" unless body.is_a?(Hash)
+
+      status = result[:status] || result["status"]
+      if status && !status.to_i.between?(200, 299)
+        raise "OAuth token exchange failed with status #{status}"
+      end
+
+      stringify_keys(body)
+    end
+
+    def persist_oauth_token_payload!(payload)
+      raise "OAuth token payload must be a JSON object" unless payload.is_a?(Hash)
+
+      FileUtils.mkdir_p(File.dirname(oauth_token_path))
+      File.write(oauth_token_path, JSON.pretty_generate(payload) + "\n", perm: 0o600)
+    end
+
+    def parse_token_json_paste(token_json)
+      raw = token_json.to_s.strip
+      return nil if raw.empty?
+
+      parsed = JSON.parse(raw)
+      raise "token_json must be a JSON object" unless parsed.is_a?(Hash)
+
+      parsed
+    rescue JSON::ParserError => e
+      raise "invalid token_json: #{e.message}"
+    end
+
+    def store_oauth_token_payload!(payload, rejection_message:)
+      body = stringify_keys(payload)
+      access_token = Madcp.sanitize_env_value(body["access_token"])
+      raise "OAuth response did not include an access_token" if access_token.empty?
+      raise "oauth_access_env is not configured" if oauth_access_env.to_s.empty?
+
+      persist_oauth_token_payload!(body)
+      updates = { oauth_access_env => access_token }
+      updates[oauth_refresh_env] = Madcp.sanitize_env_value(body["refresh_token"]) if oauth_refresh_env
+      persist_credentials!(updates)
+      replace_client!
+      raise rejection_message unless auth_status(force: true)[:authenticated]
+
+      true
+    end
+
+    def persist_refreshed_oauth_token!(access_token:, refresh_token:, body:)
+      persist_oauth_token_payload!(body) if body.is_a?(Hash)
+      updates = { oauth_access_env => access_token }
+      updates[oauth_refresh_env] = refresh_token if oauth_refresh_env
+      persist_credentials!(updates)
+    end
 
     private
+
+    def filter_tool_arguments(definition, arguments)
+      allowed = definition.input_schema.fetch(:properties, {}).keys.map(&:to_sym)
+      arguments.to_h.transform_keys(&:to_sym).select { |key, _| allowed.include?(key) }
+    end
 
     def configure_once!
       return if @configured

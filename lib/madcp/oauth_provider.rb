@@ -164,7 +164,7 @@ module Madcp
     def load_access_token(token)
       return nil if token.to_s.empty?
 
-      entry = @config.auth_token_store.lookup(token)
+      entry = @config.app_auth.lookup_bearer(token)
       return { subject: entry.label, expires_at: nil } if entry
 
       @mutex.synchronize do
@@ -311,12 +311,7 @@ module Madcp
       }
     end
 
-    def secure_equals(a, b)
-      OpenSSL.fixed_length_secure_compare(
-        Digest::SHA256.digest(a.to_s),
-        Digest::SHA256.digest(b.to_s),
-      )
-    end
+    def secure_equals(a, b) = Madcp.secure_equals(a, b)
 
     def append_query(url, values)
       uri = URI.parse(url)

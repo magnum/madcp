@@ -1,16 +1,6 @@
 # frozen_string_literal: true
 
-require "tmpdir"
-require "openssl"
-
-ENV["MADCP_PUBLIC_URL"] = "http://localhost:8765"
-ENV["MADCP_AUTH_TOKEN"] = "static-test-token"
-ENV["MADCP_SECRET_KEY"] = "test-secret-key"
-ENV["MADCP_AUTH_USERS_PATH"] = File.join(Dir.tmpdir, "madcp-auth-users-#{Process.pid}")
-File.write(ENV["MADCP_AUTH_USERS_PATH"], "user1:" + OpenSSL::HMAC.hexdigest("SHA256", "test-secret-key", "secret") + " # test\n")
-ENV["MADCP_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
-ENV["MADCP_ALLOW_WRITE"] = "false"
-ENV["MADCP_REQUEST_LOG"] = File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
+require_relative "test_helper"
 
 require "base64"
 require "fileutils"
@@ -60,42 +50,45 @@ class AppTest < Minitest::Test
     assert_equal 401, response.status
   end
 
-  def test_auth_token_store_parses_labels_and_disabled_lines
+  def test_app_auth_parses_tokens_and_disabled_lines
     dir = Dir.mktmpdir
-    path = File.join(dir, "auth_tokens")
+    tokens = File.join(dir, "auth_tokens")
+    users = File.join(dir, "auth_users")
     File.write(
-      path,
+      tokens,
       <<~TOKENS,
         live-token-one # desktop
         # revoked-token # old
         live-token-two # cowork
       TOKENS
     )
-    store = Madcp::AuthTokenStore.new(path: path)
-    assert store.valid?("live-token-one")
-    assert store.valid?("live-token-two")
-    refute store.valid?("revoked-token")
-    assert_equal "desktop", store.lookup("live-token-one").label
+    File.write(users, "")
+    auth = Madcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: "pepper")
+    assert auth.valid_bearer?("live-token-one")
+    assert auth.valid_bearer?("live-token-two")
+    refute auth.valid_bearer?("revoked-token")
+    assert_equal "desktop", auth.lookup_bearer("live-token-one").label
 
-    File.write(path, "live-token-one # desktop\n# live-token-two # cowork\n")
-    # bump mtime
-    File.utime(Time.now + 2, Time.now + 2, path)
-    assert store.valid?("live-token-one")
-    refute store.valid?("live-token-two")
+    File.write(tokens, "live-token-one # desktop\n# live-token-two # cowork\n")
+    File.utime(Time.now + 2, Time.now + 2, tokens)
+    assert auth.valid_bearer?("live-token-one")
+    refute auth.valid_bearer?("live-token-two")
   ensure
     FileUtils.remove_entry(dir) if dir
   end
 
-  def test_auth_user_store_validates_hmac_and_disabled_lines
+  def test_app_auth_validates_users_hmac_and_disabled_lines
     dir = Dir.mktmpdir
-    path = File.join(dir, "auth_users")
+    tokens = File.join(dir, "auth_tokens")
+    users = File.join(dir, "auth_users")
     secret = "pepper"
-    digest = Madcp::AuthUserStore.hash_password("hunter2", secret: secret)
-    File.write(path, "alice:#{digest} # alice\n# bob:#{digest} # bob\n")
-    store = Madcp::AuthUserStore.new(path: path, secret: secret)
-    assert store.valid?("alice", "hunter2")
-    refute store.valid?("alice", "wrong")
-    refute store.valid?("bob", "hunter2")
+    digest = Madcp::AppAuth.hash_password("hunter2", secret: secret)
+    File.write(tokens, "")
+    File.write(users, "alice:#{digest} # alice\n# bob:#{digest} # bob\n")
+    auth = Madcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: secret)
+    assert auth.valid_basic?("alice", "hunter2")
+    refute auth.valid_basic?("alice", "wrong")
+    refute auth.valid_basic?("bob", "hunter2")
   ensure
     FileUtils.remove_entry(dir) if dir
   end

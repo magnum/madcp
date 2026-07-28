@@ -836,10 +836,6 @@ module Madcp
         rescue CliError => e
           text_response("ERROR: #{e.message}")
         end
-
-        def compact_hash(values)
-          values.reject { |_, value| value.nil? || value == "" }
-        end
       end
     end
   end

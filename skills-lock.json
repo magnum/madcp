@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "37signals-rails": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/.experimental/37signals-rails/SKILL.md",
+      "computedHash": "940eafb68b5d64774e476d423651240da5a52642c72062bb01e230c8eabf7725"
+    }
+  }
+}

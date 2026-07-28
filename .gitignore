@@ -5,3 +5,5 @@
 /logs/
 /vendor/
 /docker-compose.override.yml
+
+.claude/skills/37signals-rails

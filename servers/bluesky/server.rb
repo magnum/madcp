@@ -102,25 +102,17 @@ module Madcp
           handle = params["bluesky_handle"].to_s.strip
           password = params["bluesky_app_password"].to_s.strip
           pds_host = params["bluesky_pds_host"].to_s.strip
-          old = credential_env_keys.to_h { |key| [key, ENV[key]] }
-
-          updates = {
-            "BLUESKY_HANDLE" => handle,
-            "BLUESKY_APP_PASSWORD" => password,
-            "BLUESKY_PDS_HOST" => pds_host,
-            "BLUESKY_ACCESS_JWT" => nil,
-            "BLUESKY_REFRESH_JWT" => nil,
-            "BLUESKY_DID" => nil,
-          }
-          persist_credentials!(updates)
-          @client = build_client
-          status = auth_status(force: true)
-          return true if status[:authenticated]
-
-          detail = status[:error].to_s.strip
-          persist_credentials!(old)
-          @client = build_client
-          raise detail.empty? ? "Bluesky credentials were rejected" : "Bluesky credentials were rejected: #{detail}"
+          apply_credentials_probe!(
+            {
+              "BLUESKY_HANDLE" => handle,
+              "BLUESKY_APP_PASSWORD" => password,
+              "BLUESKY_PDS_HOST" => pds_host,
+              "BLUESKY_ACCESS_JWT" => nil,
+              "BLUESKY_REFRESH_JWT" => nil,
+              "BLUESKY_DID" => nil,
+            },
+            rejection_message: "Bluesky credentials were rejected",
+          )
         ensure
           password = nil
         end
@@ -134,7 +126,7 @@ module Madcp
             "BLUESKY_REFRESH_JWT" => nil,
             "BLUESKY_DID" => nil,
           )
-          @client = build_client
+          replace_client!
         end
 
         def configure_tools
@@ -155,6 +147,10 @@ module Madcp
             BLUESKY_REFRESH_JWT
             BLUESKY_DID
           ]
+        end
+
+        def replace_client!
+          @client = build_client
         end
 
         private
@@ -633,30 +629,12 @@ module Madcp
           parts.last.to_s
         end
 
-        def object_prop(description)
-          { type: "object", description: description, additionalProperties: true }
-        end
-
-        def compact_hash(values)
-          values.reject { |_, value| value.nil? || value == "" }
-        end
-
-        def stringify_keys(values)
-          values.to_h.transform_keys(&:to_s)
-        end
-
         def api_get(nsid, query: {})
           api_response { @client.get(nsid, query: query) }
         end
 
         def api_post(nsid, body:)
           api_response { @client.post(nsid, body: body) }
-        end
-
-        def api_response
-          text_response(JSON.pretty_generate(yield))
-        rescue Client::Error => e
-          text_response("ERROR: #{e.message}")
         end
       end
     end

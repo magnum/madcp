@@ -104,20 +104,14 @@ module Madcp
           token = params["toggltrack_token"].to_s.strip
           organization_id = params["toggltrack_organization_id"].to_s.strip
           workspace_id = params["toggltrack_workspace_id"].to_s.strip
-          old = credential_env_keys.to_h { |key| [key, ENV[key]] }
-
-          updates = {
-            "TOGGLTRACK_TOKEN" => token,
-            "TOGGLTRACK_ORGANIZATION_ID" => organization_id,
-            "TOGGLTRACK_WORKSPACE_ID" => workspace_id,
-          }
-          persist_credentials!(updates)
-          @client = Client.new
-          return true if auth_status(force: true)[:authenticated]
-
-          persist_credentials!(old)
-          @client = Client.new
-          raise "Toggl Track API token was rejected"
+          apply_credentials_probe!(
+            {
+              "TOGGLTRACK_TOKEN" => token,
+              "TOGGLTRACK_ORGANIZATION_ID" => organization_id,
+              "TOGGLTRACK_WORKSPACE_ID" => workspace_id,
+            },
+            rejection_message: "Toggl Track API token was rejected",
+          )
         ensure
           token = nil
         end
@@ -128,7 +122,7 @@ module Madcp
             "TOGGLTRACK_ORGANIZATION_ID" => nil,
             "TOGGLTRACK_WORKSPACE_ID" => nil,
           )
-          @client = Client.new
+          replace_client!
         end
 
         def configure_tools
@@ -146,6 +140,10 @@ module Madcp
             TOGGLTRACK_ORGANIZATION_ID
             TOGGLTRACK_WORKSPACE_ID
           ]
+        end
+
+        def replace_client!
+          @client = Client.new
         end
 
         private
@@ -545,18 +543,6 @@ module Madcp
           payload
         end
 
-        def object_prop(description)
-          { type: "object", description: description, additionalProperties: true }
-        end
-
-        def compact_hash(values)
-          values.reject { |_, value| value.nil? || value == "" }
-        end
-
-        def stringify_keys(values)
-          values.to_h.transform_keys(&:to_s)
-        end
-
         def api_get(path, query: {})
           api_response { @client.get(path, query: query) }
         end
@@ -575,12 +561,6 @@ module Madcp
 
         def api_delete(path)
           api_response { @client.delete(path) }
-        end
-
-        def api_response
-          text_response(JSON.pretty_generate(yield))
-        rescue Client::Error => e
-          text_response("ERROR: #{e.message}")
         end
       end
     end

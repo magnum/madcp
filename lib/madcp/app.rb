@@ -75,42 +75,50 @@ module Madcp
       end
 
       def authorize_mcp!
-        return if provider.load_access_token(bearer_token)
-
-        metadata = "#{config.public_url}/.well-known/oauth-protected-resource/servers/#{integration.id}/mcp"
-        headers["WWW-Authenticate"] =
-          %(Bearer error="invalid_token", resource_metadata="#{metadata}")
-        halt 401, json({ error: "invalid_token", error_description: "Authentication required" }, 401)
+        unless provider.load_access_token(bearer_token)
+          metadata = "#{config.public_url}/.well-known/oauth-protected-resource/servers/#{integration.id}/mcp"
+          headers["WWW-Authenticate"] =
+            %(Bearer error="invalid_token", resource_metadata="#{metadata}")
+          halt 401, json({ error: "invalid_token", error_description: "Authentication required" }, 401)
+        end
       end
 
       def operator_ui_request?
         path = request.path_info
-        return false if path == "/logout"
-        # Provider OAuth callback is a cross-site redirect; secured by one-time state,
-        # not app auth (browsers often omit credentials on that navigation).
-        return false if path.match?(%r{\A/servers/[^/]+/oauth_callback\z})
-        return true if path == "/" || path == "/servers" || path == "/servers/"
-        return true if path.match?(%r{\A/servers/[^/]+/oauth\z})
-        return false unless path.match?(%r{\A/servers/[^/]+/auth(?:/|\z)})
-
-        !path.match?(%r{/auth/(register|token|revoke|authorize)\z})
+        if path == "/logout"
+          false
+        elsif path.match?(%r{\A/servers/[^/]+/oauth_callback\z})
+          # Cross-site redirect; secured by one-time state, not app auth.
+          false
+        elsif path == "/" || path == "/servers" || path == "/servers/"
+          true
+        elsif path.match?(%r{\A/servers/[^/]+/oauth\z})
+          true
+        elsif path.match?(%r{\A/servers/[^/]+/auth(?:/|\z)})
+          !path.match?(%r{/auth/(register|token|revoke|authorize)\z})
+        else
+          false
+        end
       end
 
-      def require_operator_basic_auth!
-        # Bearer → data/auth_tokens (static app tokens).
-        token = bearer_token
-        return if token && config.auth_token_store.valid?(token)
+      def require_operator_auth!
+        unless operator_authenticated?
+          headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
+          halt 401, "Authentication required"
+        end
+      end
 
-        # Basic Auth → data/auth_users (username + password, HMAC with MADCP_SECRET_KEY).
+      def operator_authenticated?
         header = request.env["HTTP_AUTHORIZATION"].to_s
-        if header.start_with?("Basic ")
+        if header.start_with?("Bearer ")
+          config.app_auth.valid_bearer?(header.delete_prefix("Bearer "))
+        elsif header.start_with?("Basic ")
           decoded = Base64.decode64(header.delete_prefix("Basic ")).force_encoding("UTF-8")
           username, password = decoded.split(":", 2)
-          return if config.auth_user_store.valid?(username, password)
+          config.app_auth.valid_basic?(username, password)
+        else
+          false
         end
-
-        headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
-        halt 401, "Authentication required"
       end
 
       def verify_transport!
@@ -142,6 +150,15 @@ module Madcp
 
       def oauth_callback_error_page(message, callback_params: nil)
         status 400
+        render_oauth_result(
+          oauth_result: { error: message },
+          oauth_params: callback_params || oauth_query_params,
+          token_saved: false,
+          token_save_error: nil,
+        )
+      end
+
+      def render_oauth_result(oauth_result:, oauth_params:, token_saved:, token_save_error:)
         content_type :html
         headers["Cache-Control"] = "no-store"
         headers["Referrer-Policy"] = "no-referrer"
@@ -152,10 +169,10 @@ module Madcp
           **integration_locals(
             integration,
             callback_url: oauth_callback_url,
-            oauth_params: redact_oauth_secrets(callback_params || oauth_query_params),
-            oauth_result: { error: message },
-            token_saved: false,
-            token_save_error: nil,
+            oauth_params: redact_oauth_secrets(oauth_params),
+            oauth_result: redact_oauth_secrets(oauth_result),
+            token_saved: token_saved,
+            token_save_error: token_save_error,
           ),
         )
       end
@@ -245,7 +262,7 @@ module Madcp
     before do
       env["madcp.request_started_at"] = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       env["madcp.request_body"] = capture_request_body
-      require_operator_basic_auth! if operator_ui_request?
+      require_operator_auth! if operator_ui_request?
       verify_transport! if request.path_info.include?("/mcp") ||
                            request.path_info.match?(%r{/servers/[^/]+/tools/})
     end
@@ -463,17 +480,11 @@ module Madcp
           end
         end
       end
-      content_type :html
-      renderer.page(
-        "oauth_result",
-        **integration_locals(
-          integration,
-          callback_url: oauth_callback_url,
-          oauth_params: redact_oauth_secrets(callback_params),
-          oauth_result: redact_oauth_secrets(result),
-          token_saved: token_saved,
-          token_save_error: token_save_error,
-        ),
+      render_oauth_result(
+        oauth_result: result,
+        oauth_params: callback_params,
+        token_saved: token_saved,
+        token_save_error: token_save_error,
       )
     rescue StandardError => e
       oauth_callback_error_page(e.message)
@@ -494,17 +505,11 @@ module Madcp
       redirect "/servers/#{integration.id}/auth", 302
     rescue StandardError => e
       status 400
-      content_type :html
-      renderer.page(
-        "oauth_result",
-        **integration_locals(
-          integration,
-          callback_url: oauth_callback_url,
-          oauth_params: {},
-          oauth_result: { error: e.message },
-          token_saved: false,
-          token_save_error: e.message,
-        ),
+      render_oauth_result(
+        oauth_result: { error: e.message },
+        oauth_params: {},
+        token_saved: false,
+        token_save_error: e.message,
       )
     end
 
