@@ -18,35 +18,66 @@
   <% access_token = token_body["access_token"] || token_body[:access_token] %>
   <% refresh_token = token_body["refresh_token"] || token_body[:refresh_token] %>
   <% token_json_text = body.is_a?(Hash) ? JSON.pretty_generate(body) : "" %>
+  <% expires_in = token_body["expires_in"] || token_body[:expires_in] %>
+  <% oauth_error = oauth_result.is_a?(Hash) ? (oauth_result[:error] || oauth_result["error"]) : nil %>
 
   <% if token_saved %>
-    <div class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-5 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100"
+    <div class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-6 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100"
          role="status">
-      <p class="font-semibold">Token saved into MadCP.</p>
-      <p class="mt-2 leading-7">
-        Access token and the full OAuth JSON (including refresh token when present) are stored.
-        You can return to the authentication page — the token field is already filled.
+      <p class="text-xl font-bold">Done — token saved automatically</p>
+      <p class="mt-3 leading-7">
+        MadCP already stored the access token<%= refresh_token ? " and refresh token" : "" %>
+        for <%= h integration.display_name %>. You do <strong>not</strong> need to copy anything.
+        <% if expires_in %>
+          Access tokens last about <%= h expires_in.to_i / 3600 %> hours; MadCP refreshes them
+          automatically when a refresh token is present.
+        <% end %>
       </p>
-      <a class="mt-4 inline-block font-bold underline decoration-emerald-700 underline-offset-4"
-         href="/servers/<%= h integration.id %>/auth">Go to authentication form</a>
+      <a class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-emerald-900 px-5 py-3 text-center text-base font-bold text-emerald-50 hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900 focus:ring-offset-2 dark:bg-emerald-100 dark:text-emerald-950 dark:hover:bg-emerald-200 dark:focus:ring-emerald-100 dark:focus:ring-offset-emerald-950 sm:w-auto"
+         href="/servers/<%= h integration.id %>/auth">
+        Continue to authentication
+      </a>
+      <p class="mt-3 text-sm leading-6 opacity-80">
+        Optional backup copies are below if you want them. The primary next step is the button above.
+      </p>
     </div>
   <% elsif token_save_error %>
     <div class="mt-8 rounded-lg border border-amber-700 bg-amber-50 p-5 text-amber-950 dark:bg-amber-950 dark:text-amber-100"
          role="alert">
       <p class="font-semibold">Automatic save failed</p>
       <p class="mt-2 leading-7"><%= h token_save_error %></p>
-      <p class="mt-2 leading-7">Paste the access token below to save it into the MadCP auth form.</p>
+      <p class="mt-2 leading-7">
+        Use the form below (access token is required; full OAuth JSON keeps the refresh token too).
+      </p>
+    </div>
+  <% elsif oauth_error %>
+    <div class="mt-8 rounded-lg border border-red-700 bg-red-50 p-5 text-red-950 dark:bg-red-950 dark:text-red-100"
+         role="alert">
+      <p class="font-semibold">OAuth callback error</p>
+      <p class="mt-2 leading-7"><%= h oauth_error %></p>
+      <a class="mt-4 inline-flex items-center justify-center rounded-lg bg-red-900 px-5 py-3 font-bold text-red-50 hover:bg-red-800 dark:bg-red-100 dark:text-red-950 dark:hover:bg-red-200"
+         href="/servers/<%= h integration.id %>/auth">
+        Back to authentication
+      </a>
+    </div>
+  <% elsif access_token %>
+    <div class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-5 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100"
+         role="status">
+      <p class="font-semibold">Provider returned a token</p>
+      <p class="mt-2 leading-7">
+        Confirm save with the primary button in the form below — do not only copy tokens into
+        <code class="font-mono">.env</code> unless you are configuring MadCP offline.
+      </p>
     </div>
   <% end %>
 
-  <% show_save_form = !token_saved && (access_token || refresh_token || token_save_error || oauth_result) %>
+  <% show_save_form = !token_saved && !oauth_error && (access_token || refresh_token || token_save_error || oauth_result) %>
   <% if show_save_form %>
     <section class="mt-8 rounded-lg border border-stone-400 bg-stone-50 p-6 dark:border-zinc-600 dark:bg-zinc-900">
       <h2 class="text-2xl font-bold">Save token into MadCP</h2>
       <p class="mt-3 leading-7 text-stone-700 dark:text-zinc-300">
-        Read the token from the above output and set it in the token field below.
-        Saving writes it into the MadCP authentication form for this integration
-        (and stores the full OAuth JSON when available).
+        This writes the access token (and refresh token from the OAuth JSON when present) into
+        MadCP’s credentials store for this integration.
       </p>
 
       <form class="mt-6 space-y-5"
@@ -83,16 +114,20 @@
   <% end %>
 
   <% if access_token || refresh_token %>
-    <section class="mt-8 rounded-lg border border-emerald-700 bg-emerald-50 p-6 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100">
-      <h2 class="text-2xl font-bold">Copy tokens now</h2>
-      <p class="mt-2 leading-7">Keep a backup copy if you want — MadCP also stores them when save succeeds.</p>
+    <section class="mt-8 rounded-lg border border-stone-300 bg-stone-50 p-6 dark:border-zinc-700 dark:bg-zinc-900">
+      <h2 class="text-xl font-bold text-stone-800 dark:text-zinc-100">Optional: copy tokens</h2>
+      <p class="mt-2 leading-7 text-stone-600 dark:text-zinc-400">
+        Only for backup or offline setup. Normal flow: use
+        <strong><%= token_saved ? "Continue to authentication" : "Save token and return to authentication" %></strong>
+        above — MadCP stores both access and refresh tokens when save succeeds.
+      </p>
       <% { "Access token" => access_token, "Refresh token" => refresh_token }.each do |label, token| %>
         <% next unless token %>
         <div class="mt-5" data-command>
           <label class="block font-semibold"><%= h label %></label>
-          <textarea class="mt-2 h-28 w-full resize-y rounded-lg border border-emerald-800 bg-stone-50 p-4 font-mono text-stone-950 dark:bg-zinc-950 dark:text-zinc-100"
+          <textarea class="mt-2 h-28 w-full resize-y rounded-lg border border-stone-300 bg-white p-4 font-mono text-stone-950 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
                     readonly><%= h token %></textarea>
-          <button class="mt-2 rounded-md border border-emerald-800 bg-stone-50 px-4 py-2 font-semibold text-emerald-950 hover:bg-emerald-100 dark:bg-zinc-900 dark:text-emerald-100 dark:hover:bg-zinc-800"
+          <button class="mt-2 rounded-md border border-stone-400 bg-white px-4 py-2 font-semibold text-stone-800 hover:bg-stone-100 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   type="button"
                   onclick="copyAuthCommand(this)">Copy <%= h label.downcase %></button>
         </div>
@@ -100,24 +135,27 @@
     </section>
   <% end %>
 
-  <section class="mt-8 border-t border-stone-300 pt-8 dark:border-zinc-700">
-    <h2 class="text-2xl font-bold">Callback query parameters</h2>
-    <textarea class="mt-4 h-48 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              readonly><%= h JSON.pretty_generate(oauth_params) %></textarea>
-  </section>
-
-  <% if oauth_result %>
-    <section class="mt-8 border-t border-stone-300 pt-8 dark:border-zinc-700">
-      <h2 class="text-2xl font-bold">Upstream token response</h2>
-      <% status = oauth_result.is_a?(Hash) ? (oauth_result[:status] || oauth_result["status"]) : nil %>
-      <% upstream_headers = oauth_result.is_a?(Hash) ? (oauth_result[:headers] || oauth_result["headers"] || {}) : {} %>
-      <p class="mt-3">Status: <span class="font-mono font-semibold"><%= h status || "not available" %></span></p>
-      <h3 class="mt-6 text-xl font-bold">Headers</h3>
-      <textarea class="mt-3 h-40 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                readonly><%= h JSON.pretty_generate(upstream_headers) %></textarea>
-      <h3 class="mt-6 text-xl font-bold">Body</h3>
-      <textarea class="mt-3 h-64 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                readonly><%= h JSON.pretty_generate(body || oauth_result) %></textarea>
+  <details class="mt-8 border-t border-stone-300 pt-8 dark:border-zinc-700">
+    <summary class="cursor-pointer text-lg font-bold">Technical details</summary>
+    <section class="mt-6">
+      <h2 class="text-xl font-bold">Callback query parameters</h2>
+      <textarea class="mt-4 h-48 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                readonly><%= h JSON.pretty_generate(oauth_params) %></textarea>
     </section>
-  <% end %>
+
+    <% if oauth_result %>
+      <section class="mt-8">
+        <h2 class="text-xl font-bold">Upstream token response</h2>
+        <% status = oauth_result.is_a?(Hash) ? (oauth_result[:status] || oauth_result["status"]) : nil %>
+        <% upstream_headers = oauth_result.is_a?(Hash) ? (oauth_result[:headers] || oauth_result["headers"] || {}) : {} %>
+        <p class="mt-3">Status: <span class="font-mono font-semibold"><%= h status || "not available" %></span></p>
+        <h3 class="mt-6 text-lg font-bold">Headers</h3>
+        <textarea class="mt-3 h-40 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  readonly><%= h JSON.pretty_generate(upstream_headers) %></textarea>
+        <h3 class="mt-6 text-lg font-bold">Body</h3>
+        <textarea class="mt-3 h-64 w-full resize-y rounded-lg border border-stone-300 bg-stone-100 p-4 font-mono text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  readonly><%= h JSON.pretty_generate(body || oauth_result) %></textarea>
+      </section>
+    <% end %>
+  </details>
 </div>
