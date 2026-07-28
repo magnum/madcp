@@ -183,4 +183,90 @@ class BlueskyTest < Minitest::Test
     restore.call("BLUESKY_REFRESH_JWT", old_refresh)
     restore.call("BLUESKY_DID", old_did)
   end
+
+  def test_client_refreshes_on_400_expired_token_and_retries
+    expired = Net::HTTPBadRequest.new("1.1", "400", "Bad Request")
+    expired.define_singleton_method(:body) do
+      JSON.generate("error" => "ExpiredToken", "message" => "Token has expired")
+    end
+    expired.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    refresh_ok = Net::HTTPOK.new("1.1", "200", "OK")
+    refresh_ok.define_singleton_method(:body) do
+      JSON.generate(
+        "did" => "did:plc:abc",
+        "handle" => "alice.bsky.social",
+        "accessJwt" => "access.new",
+        "refreshJwt" => "refresh.new",
+      )
+    end
+    refresh_ok.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    success = Net::HTTPOK.new("1.1", "200", "OK")
+    success.define_singleton_method(:body) { JSON.generate("did" => "did:plc:abc") }
+    success.define_singleton_method(:each_header) do |&block|
+      next enum_for(:each_header) unless block
+
+      block.call("content-type", "application/json")
+    end
+
+    requests = []
+    fake_http = Object.new
+    fake_http.define_singleton_method(:request) do |request|
+      requests << { path: request.uri.path, auth: request["Authorization"] }
+      if request.uri.path.end_with?("com.atproto.server.refreshSession")
+        refresh_ok
+      elsif requests.count { |item| item[:path].include?("app.bsky.actor.getProfile") } == 1
+        expired
+      else
+        success
+      end
+    end
+
+    old_access = ENV["BLUESKY_ACCESS_JWT"]
+    old_refresh = ENV["BLUESKY_REFRESH_JWT"]
+    ENV["BLUESKY_ACCESS_JWT"] = "access.expired"
+    ENV["BLUESKY_REFRESH_JWT"] = "refresh.old"
+
+    persisted = nil
+    client = Madcp::Servers::Bluesky::Client.new(
+      on_session: lambda { |**kwargs| persisted = kwargs },
+    )
+    original_start = Net::HTTP.method(:start)
+    Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
+
+    result = client.get("app.bsky.actor.getProfile", query: { actor: "alice.bsky.social" })
+
+    assert_equal 200, result[:status]
+    assert_equal 3, requests.length
+    assert_equal "Bearer access.expired", requests[0][:auth]
+    assert_includes requests[1][:path], "com.atproto.server.refreshSession"
+    assert_equal "Bearer refresh.old", requests[1][:auth]
+    assert_equal "Bearer access.new", requests[2][:auth]
+    assert_equal "access.new", ENV["BLUESKY_ACCESS_JWT"]
+    assert_equal "refresh.new", ENV["BLUESKY_REFRESH_JWT"]
+    assert_equal "access.new", persisted[:access_jwt]
+  ensure
+    Net::HTTP.define_singleton_method(:start) do |*args, **kwargs, &block|
+      original_start.call(*args, **kwargs, &block)
+    end if original_start
+    if old_access
+      ENV["BLUESKY_ACCESS_JWT"] = old_access
+    else
+      ENV.delete("BLUESKY_ACCESS_JWT")
+    end
+    if old_refresh
+      ENV["BLUESKY_REFRESH_JWT"] = old_refresh
+    else
+      ENV.delete("BLUESKY_REFRESH_JWT")
+    end
+  end
 end

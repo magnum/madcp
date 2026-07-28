@@ -75,7 +75,8 @@ module Madcp
             write_timeout: @timeout,
           ) { |http| http.request(http_request) }
 
-          if auth && response.code.to_i == 401 && !retrying
+          # AT Proto returns ExpiredToken as HTTP 400 (sometimes 401). Match @atproto/api.
+          if auth && !retrying && session_expired_response?(response)
             @session_mutex.synchronize { refresh_session! }
             return request(
               method,
@@ -154,6 +155,24 @@ module Madcp
 
         def refresh_jwt
           Madcp.sanitize_env_value(ENV["BLUESKY_REFRESH_JWT"])
+        end
+
+        def session_expired_response?(response)
+          code = response.code.to_i
+          return true if code == 401
+          return false unless code == 400
+
+          body = parse_json_object(response.body.to_s)
+          return false unless body
+
+          %w[ExpiredToken InvalidToken].include?(body["error"].to_s)
+        end
+
+        def parse_json_object(raw)
+          parsed = JSON.parse(raw)
+          parsed.is_a?(Hash) ? parsed : nil
+        rescue JSON::ParserError
+          nil
         end
 
         def session_snapshot
