@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "madcp/auth_token_store"
 require_relative "madcp/config"
 require_relative "madcp/cli_client"
 require_relative "madcp/integration"

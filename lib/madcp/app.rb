@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 require "base64"
-require "digest"
 require "json"
-require "openssl"
 require "securerandom"
 require "sinatra/base"
 require "uri"
@@ -89,7 +87,7 @@ module Madcp
         path = request.path_info
         return false if path == "/logout"
         # Provider OAuth callback is a cross-site redirect; secured by one-time state,
-        # not Basic Auth (browsers often omit credentials on that navigation).
+        # not app auth (browsers often omit credentials on that navigation).
         return false if path.match?(%r{\A/servers/[^/]+/oauth_callback\z})
         return true if path == "/" || path == "/servers" || path == "/servers/"
         return true if path.match?(%r{\A/servers/[^/]+/oauth\z})
@@ -99,25 +97,21 @@ module Madcp
       end
 
       def require_operator_basic_auth!
+        # Prefer Bearer from data/auth_tokens (or MADCP_AUTH_TOKEN).
+        token = bearer_token
+        return if token && config.auth_token_store.valid?(token)
+
+        # Browser-friendly Basic Auth: username is ignored; password must be a
+        # valid MadCP app token from auth_tokens.
         header = request.env["HTTP_AUTHORIZATION"].to_s
         if header.start_with?("Basic ")
           decoded = Base64.decode64(header.delete_prefix("Basic ")).force_encoding("UTF-8")
-          username, password = decoded.split(":", 2)
-          if secure_basic_equals(username, config.auth_username) &&
-             secure_basic_equals(password, config.auth_password)
-            return
-          end
+          _username, password = decoded.split(":", 2)
+          return if config.auth_token_store.valid?(password)
         end
 
         headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
         halt 401, "Authentication required"
-      end
-
-      def secure_basic_equals(a, b)
-        OpenSSL.fixed_length_secure_compare(
-          Digest::SHA256.digest(a.to_s),
-          Digest::SHA256.digest(b.to_s),
-        )
       end
 
       def verify_transport!
