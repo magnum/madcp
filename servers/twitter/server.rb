@@ -51,14 +51,19 @@ module Madcp
             description: "Use the OAuth 2.0 flow in this form (authorization code + PKCE), " \
                          "the same MadCP token-retrieval harness as Fatture in Cloud.",
             steps: [
-              "Create an app in the X Developer Portal and enable OAuth 2.0.",
-              "Set TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET (confidential client).",
-              "Register the callback URL shown below as an allowed redirect URI.",
+              "In the X Developer Portal, open your app → User authentication settings.",
+              "Enable OAuth 2.0, App type = Web App / Automated App or Bot (confidential client).",
+              "App permissions must cover your scopes (Read and write for MadCP defaults).",
+              "Callback URI / Redirect URL must be EXACTLY the URL shown below (copy-paste).",
+              "Also set Website URL (e.g. your MadCP public URL) — X often rejects auth without it.",
+              "Use the OAuth 2.0 Client ID and Client Secret (not the old API Key / Consumer Key).",
               "Choose Retrieve OAuth token, then confirm the token was saved on the callback page.",
             ],
             commands: [],
-            note: "MadCP stores the full OAuth token response under data/twitter/oauth_token.json. " \
-                  "X API access and rate limits depend on your developer tier.",
+            note: "If X shows “Something went wrong / weren’t able to give access”, it is almost " \
+                  "always a portal mismatch (callback URI, app type, permissions, or wrong Client ID), " \
+                  "not a MadCP bug. MadCP stores tokens under data/twitter/oauth_token.json. " \
+                  "API access depends on your developer tier.",
           }
         end
 
@@ -173,7 +178,7 @@ module Madcp
             code_challenge_method: "S256",
           }
           {
-            authorization_url: "https://twitter.com/i/oauth2/authorize?#{URI.encode_www_form(query)}",
+            authorization_url: "https://x.com/i/oauth2/authorize?#{URI.encode_www_form(query)}",
             code_verifier: code_verifier,
           }
         end

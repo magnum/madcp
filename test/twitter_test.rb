@@ -100,6 +100,7 @@ class TwitterTest < Minitest::Test
 
     assert result[:code_verifier]
     uri = URI(result[:authorization_url])
+    assert_equal "x.com", uri.host
     query = URI.decode_www_form(uri.query).to_h
     assert_equal "S256", query.fetch("code_challenge_method")
     expected = Base64.urlsafe_encode64(Digest::SHA256.digest(result[:code_verifier]), padding: false)

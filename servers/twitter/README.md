@@ -14,22 +14,53 @@ Operator UI: `/servers/twitter/auth`
 
 ## Credentials
 
-1. Create an app in the [X Developer Portal](https://developer.x.com/) and enable **OAuth 2.0**.
-2. Set `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` (confidential client).
-3. Register this callback URL as an allowed redirect URI:
+1. Create a **Project + App** in the [X Developer Portal](https://developer.x.com/).
+2. Open the app → **User authentication settings** (this section must be enabled explicitly):
+   - OAuth 2.0: on
+   - Type of App: **Web App, Automated App or Bot** (confidential client)
+   - App permissions: **Read and write** (needed for MadCP’s default scopes)
+   - Callback URI / Redirect URL — exact match:
 
 ```text
-${MADCP_PUBLIC_URL}/servers/twitter/oauth_callback
+https://madcp.m6i.it/servers/twitter/oauth_callback
 ```
 
-4. Open `/servers/twitter/auth` and choose **Retrieve OAuth token** (or paste a user access token).
+   (or `${MADCP_PUBLIC_URL}/servers/twitter/oauth_callback` for your host — no trailing slash)
 
-MadCP uses authorization code + PKCE through the same host harness as Fatture in Cloud. The full token response (including `refresh_token` when present) is stored under:
+   - Website URL: e.g. `https://madcp.m6i.it` (required by X for user auth)
+3. Copy the **OAuth 2.0 Client ID** and **Client Secret** into:
+
+```dotenv
+TWITTER_CLIENT_ID=...
+TWITTER_CLIENT_SECRET=...
+```
+
+   Do **not** use the legacy API Key / API Secret (OAuth 1.0a) here.
+4. Open `/servers/twitter/auth` → **Retrieve OAuth token**.
+
+MadCP uses authorization code + PKCE. The token response (including `refresh_token`) is stored under:
 
 ```text
 data/twitter/oauth_token.json
 ```
 
+### “Something went wrong / weren’t able to give access”
+
+That message is returned by **X**, before MadCP sees the callback. Checklist:
+
+1. Callback URI in the portal is an **exact** copy of the URL MadCP shows (scheme, host, path).
+2. User authentication settings are saved (OAuth 2.0 + Web App + Website URL).
+3. App permissions match requested scopes (defaults include write/like/follow/bookmark).
+4. You are logged into X in the same browser; try a private window without privacy blockers.
+5. Client ID is the OAuth 2.0 Client ID, not the API Key.
+
+To debug scopes, temporarily set a minimal set:
+
+```dotenv
+TWITTER_OAUTH_SCOPES=tweet.read users.read offline.access
+```
+
+(and set App permissions to Read in the portal), then widen again once consent works.
 ## Environment
 
 | Variable | Purpose |
