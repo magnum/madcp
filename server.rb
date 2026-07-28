@@ -5,6 +5,8 @@ $LOAD_PATH.unshift(File.join(ROOT, "lib"))
 
 require "madcp"
 
+Madcp.apply_env_sanitization!
+
 CONFIG = Madcp::Config.new(root: ROOT)
 CONFIG.validate!
 

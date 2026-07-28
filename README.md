@@ -160,7 +160,7 @@ MCP OAuth clients and tokens are persisted under `data/_oauth/<server_id>.json`,
 
 If updating integration credentials fails while Claude is waiting, use **Continue to Claude anyway** on the auth page so the MCP handshake can finish without blocking the client.
 
-Auth form fields are pre-filled from the current environment / stored credentials. Values loaded from `.env` / `credentials.env` are trimmed; placeholders like `# optional` are ignored.
+Auth form fields are pre-filled from the current environment / stored credentials. Values loaded from `.env` / `credentials.env` are trimmed; anything from `#` onward (including `# optional` / `# required` placeholders) is stripped at boot and whenever credentials are read.
 
 Per-integration credential setup is documented in each server README linked [above](#integrations).
 

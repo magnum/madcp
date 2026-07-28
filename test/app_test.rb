@@ -231,11 +231,24 @@ class AppTest < Minitest::Test
     integration.singleton_class.remove_method(:auth_status) if integration
   end
 
-  def test_sanitize_env_value_strips_optional_placeholders
+  def test_sanitize_env_value_strips_hash_comments
     assert_equal "proj-1", Madcp.sanitize_env_value("  proj-1  ")
     assert_equal "", Madcp.sanitize_env_value("# optional")
     assert_equal "", Madcp.sanitize_env_value("#optional")
+    assert_equal "", Madcp.sanitize_env_value("# required")
     assert_equal "proj-1", Madcp.sanitize_env_value("proj-1 # optional")
+    assert_equal "abc123", Madcp.sanitize_env_value("abc123 # required")
+    assert_equal "token", Madcp.sanitize_env_value("token#trailing-comment")
+    assert_equal "https://madcp.example.com", Madcp.sanitize_env_value("https://madcp.example.com")
+  end
+
+  def test_apply_env_sanitization_rewrites_process_env
+    key = "MADCP_TEST_SANITIZE_#{Process.pid}"
+    ENV[key] = "value # required"
+    Madcp.apply_env_sanitization!
+    assert_equal "value", ENV[key]
+  ensure
+    ENV.delete(key)
   end
 
   def test_auth_continue_completes_mcp_oauth_without_integration_credentials
