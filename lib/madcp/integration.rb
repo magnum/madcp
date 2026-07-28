@@ -175,7 +175,9 @@ module Madcp
     def clear_credentials! = raise(NotImplementedError)
     def configure_tools = raise(NotImplementedError)
     def oauth_call(callback_url:, state:) = raise(NotImplementedError)
-    def oauth_exchange(callback_url:, params:) = raise(NotImplementedError)
+    # state_data is the consumed oauth_retrieval_states entry (may include PKCE
+    # fields returned by oauth_call and merged by the host).
+    def oauth_exchange(callback_url:, params:, state_data: nil) = raise(NotImplementedError)
 
     # Current value for an auth form field. Prefer an explicit :value (string or
     # callable), otherwise the ENV key named by :env.

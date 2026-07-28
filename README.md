@@ -13,8 +13,10 @@ Use it as a Custom Connector from Claude Desktop, Claude on the web, Claude mobi
 | Fatture in Cloud | [README](servers/fattureincloud/README.md) | [API v2](https://developers.fattureincloud.it/) | 22 |
 | Google Workspace | [README](servers/googleworkspace/README.md) | [`googleworkspace/cli`](https://github.com/googleworkspace/cli) (`gws`) | 18 |
 | Toggl Track | [README](servers/toggltrack/README.md) | [API v9](https://engineering.toggl.com/docs/track/) | 22 |
+| Bluesky | [README](servers/bluesky/README.md) | [AT Protocol](https://docs.bsky.app/) | 22 |
+| Twitter / X | [README](servers/twitter/README.md) | [API v2](https://developer.x.com/en/docs/twitter-api) | 22 |
 
-Roughly **130 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally). Setup, credentials, env vars, and tool notes for each server live in that server’s README.
+Roughly **170 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally). Setup, credentials, env vars, and tool notes for each server live in that server’s README.
 
 ## Server folders and Git submodules
 
@@ -80,6 +82,8 @@ https://madcp.example.com/servers/basecamp/mcp
 https://madcp.example.com/servers/fattureincloud/mcp
 https://madcp.example.com/servers/googleworkspace/mcp
 https://madcp.example.com/servers/toggltrack/mcp
+https://madcp.example.com/servers/bluesky/mcp
+https://madcp.example.com/servers/twitter/mcp
 ```
 
 ## Read/write policy
@@ -99,6 +103,8 @@ BASECAMP_ALLOW_WRITE=false
 FATTUREINCLOUD_ALLOW_WRITE=false
 GOOGLEWORKSPACE_ALLOW_WRITE=false
 TOGGLTRACK_ALLOW_WRITE=false
+BLUESKY_ALLOW_WRITE=false
+TWITTER_ALLOW_WRITE=false
 ```
 
 `MADCP_MAX_CHARS` caps tool text returned to the MCP client (default `100000`, roughly aligned with Claude Code’s default MCP output budget). It does not change upstream pagination or API quotas.

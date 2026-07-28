@@ -160,11 +160,15 @@ module Madcp
         end
       end
 
+      OAUTH_REDACT_KEYS = %w[client_secret code_verifier].freeze
+
       def redact_oauth_secrets(value)
         case value
         when Hash
           value.to_h do |key, item|
-            redacted = key.to_s.casecmp?("client_secret") ? "[REDACTED]" : redact_oauth_secrets(item)
+            redacted = OAUTH_REDACT_KEYS.any? { |name| key.to_s.casecmp?(name) } ?
+              "[REDACTED]" :
+              redact_oauth_secrets(item)
             [key, redacted]
           end
         when Array
@@ -398,16 +402,19 @@ module Madcp
     post "/servers/:server_id/oauth" do
       require_oauth_token_retrieval!
       state = SecureRandom.urlsafe_base64(32)
+      result = integration.oauth_call(callback_url: oauth_callback_url, state: state)
+      authorization_url = result[:authorization_url] || result["authorization_url"]
+      raise "integration did not return an authorization_url" if authorization_url.to_s.empty?
+
+      # Persist any extra oauth_call fields (e.g. PKCE code_verifier) with the state.
+      extra = result.to_h.reject { |key, _| key.to_s == "authorization_url" }
       oauth_retrieval_mutex.synchronize do
         oauth_retrieval_states.delete_if { |_, data| data[:expires_at] < Time.now.to_i }
         oauth_retrieval_states[state] = {
           server_id: integration.id,
           expires_at: Time.now.to_i + 300,
-        }
+        }.merge(extra.transform_keys(&:to_sym))
       end
-      result = integration.oauth_call(callback_url: oauth_callback_url, state: state)
-      authorization_url = result[:authorization_url] || result["authorization_url"]
-      raise "integration did not return an authorization_url" if authorization_url.to_s.empty?
 
       redirect authorization_url, 302
     rescue StandardError => e
@@ -420,7 +427,8 @@ module Madcp
       require_oauth_token_retrieval!
       callback_params = oauth_query_params
       state = callback_params["state"]
-      halt 400, json({ error: "invalid, expired, or already used OAuth state" }, 400) unless consume_oauth_retrieval_state(state)
+      state_data = consume_oauth_retrieval_state(state)
+      halt 400, json({ error: "invalid, expired, or already used OAuth state" }, 400) unless state_data
 
       result = nil
       token_saved = false
@@ -429,6 +437,7 @@ module Madcp
         result = integration.oauth_exchange(
           callback_url: oauth_callback_url,
           params: callback_params,
+          state_data: state_data,
         )
         if integration.respond_to?(:apply_oauth_result!)
           begin

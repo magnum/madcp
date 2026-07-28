@@ -169,7 +169,7 @@ module Madcp
           { authorization_url: "https://api-v2.fattureincloud.it/oauth/authorize?#{URI.encode_www_form(query)}" }
         end
 
-        def oauth_exchange(callback_url:, params:)
+        def oauth_exchange(callback_url:, params:, state_data: nil)
           client_id = ENV["FATTUREINCLOUD_CLIENT_ID"].to_s
           client_secret = ENV["FATTUREINCLOUD_CLIENT_SECRET"].to_s
           raise "FATTUREINCLOUD_CLIENT_ID is required" if client_id.empty?

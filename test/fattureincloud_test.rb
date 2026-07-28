@@ -247,13 +247,19 @@ class OAuthTokenRetrievalTest < Minitest::Test
     def clear_credentials! = nil
     def configure_tools = nil
 
+    attr_reader :exchange_state_data
+
     def oauth_call(callback_url:, state:)
       query = URI.encode_www_form(redirect_uri: callback_url, state: state)
-      { authorization_url: "https://provider.example/authorize?#{query}" }
+      {
+        authorization_url: "https://provider.example/authorize?#{query}",
+        code_verifier: "pkce-verifier-from-oauth-call",
+      }
     end
 
-    def oauth_exchange(callback_url:, params:)
+    def oauth_exchange(callback_url:, params:, state_data: nil)
       @exchange_params = params
+      @exchange_state_data = state_data
       {
         status: 200,
         headers: { "content-type" => "application/json", "x-request-id" => "safe-id" },
@@ -270,10 +276,10 @@ class OAuthTokenRetrievalTest < Minitest::Test
   def setup
     @tmpdir = Dir.mktmpdir
     config = Madcp::Config.new(root: @tmpdir)
-    registry = Madcp::Registry.new(config: config)
-    registry.register(FakeIntegration)
+    @registry = Madcp::Registry.new(config: config)
+    @registry.register(FakeIntegration)
     renderer = Madcp::Renderer.new(views_dir: File.expand_path("../views", __dir__))
-    @app = Madcp::App.configured(config: config, registry: registry, renderer: renderer)
+    @app = Madcp::App.configured(config: config, registry: @registry, renderer: renderer)
     @request = Rack::MockRequest.new(@app)
   end
 
@@ -347,6 +353,23 @@ class OAuthTokenRetrievalTest < Minitest::Test
       { "HTTP_HOST" => "localhost" }.merge(basic_auth),
     )
     assert_equal 400, expired.status
+  end
+
+  def test_oauth_call_extra_fields_are_passed_to_exchange_as_state_data
+    launch = launch_oauth
+    state = URI.decode_www_form(URI(launch["location"]).query).to_h.fetch("state")
+    stored = @app.settings.oauth_retrieval_states.fetch(state)
+    assert_equal "pkce-verifier-from-oauth-call", stored[:code_verifier]
+
+    integration = @registry.fetch("fake-oauth")
+    callback = @request.get(
+      "/servers/fake-oauth/oauth_callback?#{URI.encode_www_form(state: state, code: "abc")}",
+      { "HTTP_HOST" => "localhost" }.merge(basic_auth),
+    )
+
+    assert_equal 200, callback.status
+    assert_equal "pkce-verifier-from-oauth-call", integration.exchange_state_data[:code_verifier]
+    assert_equal "fake-oauth", integration.exchange_state_data[:server_id]
   end
 
   private
