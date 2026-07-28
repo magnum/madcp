@@ -165,6 +165,7 @@ class AppTest < Minitest::Test
     assert_includes html, "refreshAuthStatus"
     assert_includes html, "hidden md:inline"
     assert_includes html, "flex flex-nowrap items-center justify-end gap-2"
+    assert_includes html, "flex flex-col gap-4 md:flex-row md:gap-10"
     assert_includes html, 'href="/servers/hey/auth"'
     assert_includes html, 'href="/servers/hey/tools"'
     assert_includes html, "data-auth-badge-ok"
