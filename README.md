@@ -15,8 +15,9 @@ Use it as a Custom Connector from Claude Desktop, Claude on the web, Claude mobi
 | Toggl Track | [README](servers/toggltrack/README.md) | [API v9](https://engineering.toggl.com/docs/track/) | 22 |
 | Bluesky | [README](servers/bluesky/README.md) | [AT Protocol](https://docs.bsky.app/) | 22 |
 | Twitter / X | [README](servers/twitter/README.md) | [API v2](https://developer.x.com/en/docs/twitter-api) | 22 |
+| TeslaMate | [README](servers/teslamate/README.md) | [TeslaMate](https://github.com/teslamate-org/teslamate) Postgres ([teslamate-mcp](https://github.com/magnum/teslamate-mcp) queries) | 32 |
 
-Roughly **170 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally). Setup, credentials, env vars, and tool notes for each server live in that server’s README.
+Roughly **200 tools** total. Mutations are marked `write: true` and stay disabled until you opt in per integration (or globally). Setup, credentials, env vars, and tool notes for each server live in that server’s README.
 
 ## Server folders and Git submodules
 

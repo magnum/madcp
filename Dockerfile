@@ -42,7 +42,7 @@ FROM ruby:4.0.6-slim-bookworm
 
 RUN useradd --create-home --uid 10001 madcp \
     && apt-get update \
-    && apt-get install -y --no-install-recommends gosu curl build-essential \
+    && apt-get install -y --no-install-recommends gosu curl build-essential libpq-dev libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=basecamp-build /out/basecamp /usr/local/bin/basecamp
@@ -55,7 +55,8 @@ RUN gem install bundler --no-document \
     && bundle config set --local deployment false \
     && bundle config set --local without development \
     && bundle install --jobs 4 \
-    && apt-get purge -y --auto-remove build-essential \
+    && apt-get purge -y --auto-remove build-essential libpq-dev \
+    && apt-get install -y --no-install-recommends libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY lib ./lib

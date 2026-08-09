@@ -240,7 +240,7 @@ class AppTest < Minitest::Test
     assert_equal 200, response.status
     payload = JSON.parse(response.body)
     assert_equal(
-      %w[basecamp bluesky fattureincloud googleworkspace hey toggltrack twitter],
+      %w[basecamp bluesky fattureincloud googleworkspace hey teslamate toggltrack twitter],
       payload.fetch("servers").map { |item| item.fetch("id") },
     )
   end
