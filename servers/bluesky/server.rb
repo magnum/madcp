@@ -5,15 +5,17 @@ require_relative "bluesky_client"
 module Madcp
   module Servers
     module Bluesky
-      class Server < Integration
+      class Server < ::McpServer
         server_id "bluesky"
         display_name "Bluesky"
         description "Profiles, feeds, posts, search, follows, likes, and notifications through the Bluesky AT Protocol API."
         version "0.1.0"
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = build_client
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions

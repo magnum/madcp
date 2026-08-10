@@ -5,7 +5,7 @@ require_relative "basecamp_client"
 module Madcp
   module Servers
     module Basecamp
-      class Server < Integration
+      class Server < ::McpServer
         server_id "basecamp"
         display_name "Basecamp"
         description "Projects, todos, cards, messages, chat, files, and schedules via the official Basecamp CLI."
@@ -15,10 +15,12 @@ module Madcp
           limit: { type: "integer", description: "Maximum number of items" },
           fetch_all: { type: "boolean", description: "Fetch all pages instead of applying limit" },
         }.freeze
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = Client.new
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions
@@ -119,6 +121,10 @@ module Madcp
           define_todo_tools
           define_collaboration_tools
           define_cross_project_tools
+        end
+
+        def replace_client!
+          @client = Client.new
         end
 
         protected

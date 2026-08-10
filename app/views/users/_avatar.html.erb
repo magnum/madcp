@@ -1,0 +1,10 @@
+<%# expects local variable :user, optional :size (default: "w-8 h-8") %>
+<% size = local_assigns[:size] || "w-8 h-8" %>
+<% text_size = size == "w-8 h-8" ? "text-sm" : "text-xl" %>
+<% if user.google_connected? && user.avatar_url.present? %>
+  <%= image_tag user.avatar_url, alt: user.full_name, class: "#{size} rounded-full object-cover", loading: "lazy", referrerpolicy: "no-referrer" %>
+<% else %>
+  <div class="<%= size %> rounded-full bg-gray-200 flex items-center justify-center <%= text_size %> font-medium text-gray-600">
+    <%= user.full_name.presence&.first&.upcase || user.email&.first&.upcase || "?" %>
+  </div>
+<% end %>

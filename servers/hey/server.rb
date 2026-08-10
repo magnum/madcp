@@ -6,7 +6,7 @@ require_relative "hey_client"
 module Madcp
   module Servers
     module Hey
-      class Server < Integration
+      class Server < ::McpServer
         server_id "hey"
         display_name "HEY"
         description "Email, calendar, todos, habits, time tracking, and journal via the official HEY CLI."
@@ -19,10 +19,12 @@ module Madcp
         HEY_BULLET_LINE = /\A[[:blank:]]*[-–—*•][[:blank:]]+(.+?)\z/
         HEY_NUMBERED_LINE = /\A[[:blank:]]*\d+[.)][[:blank:]]+(.+?)\z/
         HEY_PARAGRAPH_SPACER = "<div><br></div>"
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          @client = Client.new
-          super
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions
@@ -93,6 +95,10 @@ module Madcp
           define_skill
           define_read_tools
           define_write_tools
+        end
+
+        def replace_client!
+          @client = Client.new
         end
 
         # HEY/Action Text renders content as HTML: plain newlines collapse to spaces.

@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  code: invite-one
+  signature: sig-one
+  valid_from: 2026-03-20 16:11:24
+  valid_to: 2027-03-20 16:11:24
+  consumed_at:
+  state: pending
+
+two:
+  code: invite-two
+  signature: sig-two
+  valid_from: 2026-03-20 16:11:24
+  valid_to: 2027-03-20 16:11:24
+  consumed_at:
+  state: pending

@@ -1,0 +1,96 @@
+<%#
+# Stylesheet Partial
+
+This partial imports the necessary stylesheets on each page.
+By default, it includes the application CSS,
+but each page can define additional CSS sources
+by providing a `content_for(:stylesheet)` block.
+%>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/10.3.0/jsoneditor.css" integrity="sha512-iOFdnlwX6UGb55bU5DL0tjWkS/+9jxRxw2KiRzyHMZARASUSwm0nEXBcdqsYni+t3UKJSK7vrwvlL8792/UMjQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<% Administrate::Engine.stylesheets.each do |css_path| %>
+  <%= stylesheet_link_tag css_path %>
+<% end %>
+
+<%= yield :stylesheet %>
+
+<style>
+
+  :root {
+    --color-1: #1976d2;
+    --color-error: #d32f2f;
+  }
+  .bg-color1 {
+    background-color: var(--color-1);
+  }
+  .bg-color-error {
+    background-color: var(--color-error);
+  }
+  .text-color1 {
+    color: var(--color-1);
+  }
+  .text-color-error {
+    color: var(--color-error);
+  }
+
+  
+  .app-name {
+    color: #333;
+  }
+  
+  .link-btn {
+    background-color: transparent;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    margin-right: 5px;
+    margin-left: 5px;
+    color: #1976d2;
+    font-weight: normal;
+    &:hover {
+      background-color: transparent !important;
+      color: #000 !important;
+      text-decoration: underline;
+    }
+  }
+  .link-btn:hover {
+    background-color: none;
+    border: none;
+    cursor: pointer;
+    color: #000;
+  }
+
+
+  
+  .navigation {
+    flex: 1 0 14rem;
+    padding-top: 0rem;
+  }
+  .navigation__link:not(:last-of-type){
+    margin-bottom: 3px;
+  }
+
+  .attachments-listing {
+    img {
+      border: 1px solid #eee;
+    }
+  }
+  table {
+    .attachments-listing {
+      img {
+        max-width: 30px;
+        object-fit: cover;
+        border-radius: 3px;
+      }
+    }
+  }
+
+  textarea[name="document_type[recognition_prompt]"],
+  textarea[name="attachment[data]"],
+  textarea[name="document[data]"]{
+    height: 400px;
+  }
+</style>

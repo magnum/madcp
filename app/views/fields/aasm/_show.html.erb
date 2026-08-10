@@ -1,0 +1,16 @@
+<div class="row">
+  <%= badge(field.to_s) %>
+  <% field.events(field.to_s).each do |event| %>
+    <%= button_to(
+      send("event_admin_#{controller.controller_name.singularize}_path", field.resource, event: event.name.to_s),
+      class: "link-btn uppercase",
+      method: :put,
+      data: { turbo_confirm: "#{event.name}?" }
+    ) do %>
+      <%= event.name.to_s.humanize %>
+    <% end %>
+  <% end %>
+</div>
+
+
+

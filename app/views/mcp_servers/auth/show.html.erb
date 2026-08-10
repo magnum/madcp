@@ -1,0 +1,66 @@
+<% content_for :title, "#{@server.name} authentication" %>
+
+<p class="mb-4">
+  <%= link_to "← Integrations", mcp_servers_path, class: "font-semibold underline" %>
+</p>
+
+<header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+  <div>
+    <p class="text-sm font-semibold uppercase tracking-widest text-stone-500">Authentication</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight"><%= @server.name %></h1>
+  </div>
+  <% status = @server.auth_status %>
+  <p class="rounded-lg border px-4 py-2 font-semibold <%= status[:authenticated] ? "border-emerald-700 bg-emerald-50" : "border-amber-700 bg-amber-50" %>">
+    <%= status[:authenticated] ? "Authenticated" : "Not authenticated" %>
+  </p>
+</header>
+
+<% help = @server.auth_help_content %>
+<% if help %>
+  <section class="mb-8 space-y-3">
+    <h2 class="text-2xl font-bold"><%= help[:title] %></h2>
+    <p class="leading-7 text-stone-700"><%= help[:description] %></p>
+    <% Array(help[:steps]).each_with_index do |step, index| %>
+      <p class="leading-7"><span class="font-semibold"><%= index + 1 %>.</span> <%= step %></p>
+    <% end %>
+    <% if help[:note].present? %>
+      <p class="text-sm text-stone-600"><%= help[:note] %></p>
+    <% end %>
+  </section>
+<% end %>
+
+<%= form_with url: auth_credentials_mcp_server_path(@server.code), method: :post, local: true, class: "space-y-4" do %>
+  <% @server.auth_fields.each do |field| %>
+    <div>
+      <%= label_tag field[:name], field[:label], class: "mb-2 block font-semibold" %>
+      <%= text_field_tag field[:name], @server.auth_field_value(field),
+            type: field[:type] == "password" ? "password" : "text",
+            class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
+            autocomplete: "off" %>
+      <% if field[:help].present? %>
+        <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
+      <% end %>
+    </div>
+  <% end %>
+  <%= submit_tag "Save credentials", class: "rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
+<% end %>
+
+<% if @state.present? %>
+  <div class="mt-8">
+    <%= button_to "Continue to MCP client", auth_continue_mcp_server_path(@server.code),
+          method: :post, params: { state: @state },
+          class: "rounded-lg border-2 border-stone-950 px-4 py-2 font-bold" %>
+  </div>
+<% end %>
+
+<% if @server.oauth_token_retrieval? %>
+  <div class="mt-8">
+    <%= button_to "Retrieve OAuth token", provider_oauth_mcp_server_path(@server.code),
+          method: :post, class: "rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50" %>
+  </div>
+<% end %>
+
+<div class="mt-10">
+  <%= button_to "Revoke MCP sessions", auth_logout_mcp_server_path(@server.code),
+        method: :post, class: "rounded-lg border border-stone-400 px-4 py-2" %>
+</div>

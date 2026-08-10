@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  code: basic
+  name: Basic
+  description: Basic plan
+  price: 0
+  days: 365
+  is_active: true
+  is_default: true
+
+two:
+  code: pro
+  name: Pro
+  description: Pro plan
+  price: 9.99
+  days: 365
+  is_active: true
+  is_default: false

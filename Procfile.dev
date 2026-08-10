@@ -1,0 +1,3 @@
+web: DISABLE_SOLID_QUEUE_POLLING=true bin/rails server -p 3000
+#worker1: SOLID_QUEUE_WORKER=true bin/rails solid_queue:start
+css: bin/rails tailwindcss:watch

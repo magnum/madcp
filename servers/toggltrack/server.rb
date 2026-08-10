@@ -5,15 +5,17 @@ require_relative "toggltrack_client"
 module Madcp
   module Servers
     module TogglTrack
-      class Server < Integration
+      class Server < ::McpServer
         server_id "toggltrack"
         display_name "Toggl Track"
         description "Time entries, projects, tags, organizations, and workspaces through the Toggl Track API v9."
         version "0.1.0"
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = Client.new
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions

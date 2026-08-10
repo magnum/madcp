@@ -1,0 +1,102 @@
+it:
+  hello: "Ciao"
+
+  date:
+    formats:
+      default: "%d/%m/%Y"
+      long: "%d %B %Y"
+      short: "%d %b"
+
+  time:
+    formats:
+      default: "%d/%m/%Y %H:%M"
+      long: "%d %B %Y %H:%M"
+      short: "%d %b %H:%M"
+
+  home:
+    welcome: "Benvenuto nella tua applicazione."
+    sign_in_prompt: "Accedi o crea un account per continuare."
+
+  views:
+    common:
+      or: "Oppure"
+    errors:
+      fix_errors: "Correggi i seguenti errori:"
+    invitations:
+      consume_title: "Inserisci il codice invito"
+      consume_intro: "Inserisci il tuo codice invito per creare un account."
+      invitation_code: "Codice invito"
+      invitation_code_placeholder: "es. abc123"
+      continue_to_sign_up: "Continua alla registrazione"
+      use_invitation_code: "Usa codice invito"
+      invitation_accepted: "Invito accettato. Puoi ora creare il tuo account."
+      invitation_invalid: "Codice invito non valido o scaduto."
+      requires_invitation: "Hai bisogno di un invito valido per registrarti."
+      back_to_home: "Torna alla home"
+    auth:
+      not_authorized: "Non sei autorizzato ad accedere a quest'area."
+
+  authentication:
+    require_sign_in: "Devi effettuare l'accesso per continuare."
+    already_signed_in: "Sei già connesso."
+
+  sessions:
+    sign_in: "Accedi"
+    sign_out: "Esci"
+    signed_in: "Accesso effettuato con successo."
+    signed_out: "Disconnessione effettuata."
+    invalid_credentials: "Email o password non validi."
+    oauth_failure: "Autenticazione con Google fallita."
+    or_continue: "Oppure continua con"
+    connect_google: "Connetti con Google"
+    no_account: "Non hai un account?"
+
+  activerecord:
+    attributes:
+      user:
+        id: "ID"
+        firstname: "Nome"
+        lastname: "Cognome"
+        email: "Email"
+        created_at: "Creato il"
+        updated_at: "Aggiornato il"
+    errors:
+      models:
+        invitation:
+          attributes:
+            valid_to:
+              valid_to_after_valid_from: "deve essere successivo a 'Valido da'"
+
+  common:
+    cancel: "Annulla"
+
+  users:
+    index:
+      title: "Utenti"
+      no_users_found: "Nessun utente trovato."
+    show:
+      title: "Profilo"
+      back_to_list: "Torna all'elenco"
+      back_to_home: "Torna alla home"
+    edit:
+      title: "Modifica profilo"
+      submit: "Aggiorna"
+    actions:
+      show: "Visualizza"
+      edit: "Modifica"
+    updated: "Profilo aggiornato con successo."
+
+  registrations:
+    sign_up: "Registrati"
+    created: "Account creato con successo."
+    firstname: "Nome"
+    lastname: "Cognome"
+    email: "Email"
+    password: "Password"
+    password_confirmation: "Conferma password"
+    or_continue: "Oppure continua con"
+    connect_google: "Connetti con Google"
+    has_account: "Hai già un account?"
+    errors_prohibited:
+      one: "1 errore ha impedito il salvataggio dell'account:"
+      other: "%{count} errori hanno impedito il salvataggio dell'account:"
