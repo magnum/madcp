@@ -23,6 +23,12 @@
     <% Array(help[:steps]).each_with_index do |step, index| %>
       <p class="leading-7"><span class="font-semibold"><%= index + 1 %>.</span> <%= step %></p>
     <% end %>
+    <% Array(help[:commands]).each do |command| %>
+      <p class="text-sm text-stone-700">
+        <span class="font-semibold"><%= command[:label] %>:</span>
+        <code class="break-all"><%= command[:value] %></code>
+      </p>
+    <% end %>
     <% if help[:note].present? %>
       <p class="text-sm text-stone-600"><%= help[:note] %></p>
     <% end %>

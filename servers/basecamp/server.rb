@@ -32,38 +32,42 @@ module Madcp
         def auth_help_content
           {
             title: "Get Basecamp credentials",
-            description: "Authenticate the Basecamp CLI on a trusted computer, then copy its token and account ID below.",
+            description: "MadCP uses the official Basecamp CLI token — not a separate OAuth app from a " \
+                         "developer portal. If auth fails, refresh the CLI login and paste a new token.",
             steps: [
-              "Sign in with the Basecamp CLI.",
-              "Copy the current token without extra formatting.",
-              "List accounts and choose the numeric account ID MadCP should use.",
+              "On a trusted computer with a browser: run `basecamp auth login` (re-login if the token is old).",
+              "Copy the token with `basecamp auth token --quiet` (no extra quotes or whitespace).",
+              "Set the numeric Account ID from your Basecamp URL " \
+                "(https://3.basecamp.com/<account_id>/…) or `basecamp accounts list`.",
+              "Paste Account ID first, then the token, and Save credentials.",
             ],
             commands: [
               { label: "Sign in", value: "basecamp auth login" },
               { label: "Copy the token", value: "basecamp auth token --quiet" },
               { label: "Find the account ID", value: "basecamp accounts list" },
             ],
-            note: "Treat the token as a password and paste it only over HTTPS.",
+            note: "You do not renew anything in a Basecamp developer portal for this integration. " \
+                  "Treat the token as a password and paste it only over HTTPS.",
           }
         end
 
         def auth_fields
           [
             {
-              name: "basecamp_token",
-              label: "Basecamp token",
-              type: "password",
-              required: false,
-              help: "Paste the output of: basecamp auth token --quiet",
-              env: "BASECAMP_TOKEN",
-            },
-            {
               name: "basecamp_account_id",
               label: "Basecamp account ID",
               type: "text",
-              required: false,
-              help: "The numeric account ID from your Basecamp URL or `basecamp accounts list`.",
+              required: true,
+              help: "Numeric ID from https://3.basecamp.com/<account_id>/… or `basecamp accounts list`.",
               env: "BASECAMP_ACCOUNT_ID",
+            },
+            {
+              name: "basecamp_token",
+              label: "Basecamp token",
+              type: "password",
+              required: true,
+              help: "Paste the output of: basecamp auth token --quiet. Leave blank to keep a saved token.",
+              env: "BASECAMP_TOKEN",
             },
           ]
         end
@@ -84,25 +88,41 @@ module Madcp
         end
 
         def apply_credentials(params)
-          token = params["basecamp_token"].to_s.strip
-          account_id = params["basecamp_account_id"].to_s.strip
+          load_credentials!
+          token = Madcp.sanitize_env_value(params["basecamp_token"])
+          account_id = Madcp.sanitize_env_value(params["basecamp_account_id"])
+
+          updates = {}
+          updates["BASECAMP_TOKEN"] = token if token.present?
+          updates["BASECAMP_ACCOUNT_ID"] = account_id if account_id.present?
+
+          effective_token = updates["BASECAMP_TOKEN"].presence ||
+            Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
+          effective_account = updates["BASECAMP_ACCOUNT_ID"].presence ||
+            Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"])
+
+          raise "Basecamp token is required" if effective_token.empty?
+          raise "Basecamp account ID is required" if effective_account.empty?
+
           old_token = ENV["BASECAMP_TOKEN"]
           old_account = ENV["BASECAMP_ACCOUNT_ID"]
-
-          updates = {
-            "BASECAMP_TOKEN" => token,
-            "BASECAMP_ACCOUNT_ID" => account_id,
-          }
-          persist_credentials!(updates)
-          @client = Client.new
-          return true if auth_status(force: true)[:authenticated]
+          persist_credentials!(
+            "BASECAMP_TOKEN" => effective_token,
+            "BASECAMP_ACCOUNT_ID" => effective_account,
+          )
+          replace_client!
+          status = auth_status(force: true)
+          return true if status[:authenticated]
 
           persist_credentials!(
             "BASECAMP_TOKEN" => old_token,
             "BASECAMP_ACCOUNT_ID" => old_account,
           )
-          @client = Client.new
-          raise "Basecamp token rejected or account ID is invalid"
+          replace_client!
+          detail = status[:error].presence || "authenticated=false"
+          raise "Basecamp token rejected or account ID is invalid (#{detail}). " \
+                "Re-run `basecamp auth login`, then paste a fresh `basecamp auth token --quiet`. " \
+                "Account ID is the number in https://3.basecamp.com/<id>/… — not a developer-portal app secret."
         ensure
           token = nil
         end

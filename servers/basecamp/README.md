@@ -14,10 +14,10 @@ Operator UI: `/servers/basecamp/auth`
 
 ## Credentials
 
-1. On a machine with a browser: `basecamp auth login`.
+1. On a machine with a browser: `basecamp auth login` (re-login if tokens stop working — this is not a developer-portal renewal).
 2. Copy the token: `basecamp auth token --quiet`
-3. Set the numeric **account ID** (from your Basecamp URL or `basecamp accounts list`).
-4. Paste token + account ID into `/servers/basecamp/auth`.
+3. Set the numeric **account ID** (from `https://3.basecamp.com/<account_id>/…` or `basecamp accounts list`).
+4. Paste **account ID**, then **token**, into `/servers/basecamp/auth`.
 
 CLI config/cache live under `./data/cli/basecamp` and `./data/cli/basecamp-cache` in Docker.
 
