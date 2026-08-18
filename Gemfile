@@ -78,7 +78,8 @@ end
 
 gem "pry"
 gem "pry-rails"
-gem "dotenv-rails", groups: [:development, :test]
+# Loaded in all envs: production reads /rails/storage/.env from the Kamal volume (see config/boot.rb).
+gem "dotenv-rails"
 gem "pundit"
 gem "rolify"
 gem "aasm"

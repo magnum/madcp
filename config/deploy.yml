@@ -73,8 +73,11 @@ aliases:
   logs: app logs -f
   dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
 
-# Use a persistent storage volume for sqlite database files and local Active Storage files.
-# Recommended to change this to a mounted volume path that is backed up off server.
+# Use a persistent storage volume for sqlite database files, Active Storage,
+# MCP CLI home, and the optional shared env file (storage/.env).
+# Host: /data/madcp/storage/.env is loaded at boot (see config/boot.rb) —
+# put FATTUREINCLOUD_*, *_ALLOW_WRITE, timeouts, etc. there instead of listing
+# every key under env.secret in this file.
 volumes:
   - "/data/madcp/storage:/rails/storage"
 

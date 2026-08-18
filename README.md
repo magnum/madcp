@@ -16,6 +16,19 @@ bin/rails db:seed
 bin/dev
 ```
 
+### Production env (Kamal)
+
+Keep only deploy-critical secrets in `.kamal/secrets` / `deploy.yml` (`RAILS_MASTER_KEY`, Google OmniAuth, `APP_HOST`).
+
+Put the rest in a single file on the server volume (not in git):
+
+```bash
+# on the deploy host
+install -m 600 /dev/stdin /data/madcp/storage/.env < .env   # from your machine via scp/ssh
+```
+
+That file is mounted at `/rails/storage/.env` and loaded at boot for web + worker. Existing Kamal/env values are not overridden.
+
 ### Required env
 
 | Variable | Purpose |
