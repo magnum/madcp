@@ -33,13 +33,15 @@
   <div class="mb-8">
     <%= button_to "Continue to MCP client", auth_continue_mcp_server_path(@server.code),
           method: :post, params: { state: @state },
+          data: { turbo: false },
           class: "cursor-pointer rounded-lg border-2 border-stone-950 px-4 py-2 font-bold" %>
   </div>
 <% end %>
 
 <% if @server.oauth_token_retrieval? %>
   <% callback_url = "#{Madcp.public_url}/servers/#{@server.code}/oauth_callback" %>
-  <%= form_with url: provider_oauth_mcp_server_path(@server.code), method: :post, local: true, class: "space-y-4" do %>
+  <%= form_with url: provider_oauth_mcp_server_path(@server.code), method: :post,
+        data: { turbo: false }, class: "space-y-4" do %>
     <% @server.oauth_app_auth_fields.each do |field| %>
       <% stored = @server.auth_field_value(field) %>
       <% password = field[:type] == "password" %>
