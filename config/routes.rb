@@ -37,6 +37,7 @@ Rails.application.routes.draw do
       post "auth/credentials", to: "mcp_servers/auth#credentials", as: :auth_credentials
       post "auth/continue", to: "mcp_servers/auth#continue", as: :auth_continue
       match "auth/logout", to: "mcp_servers/auth#logout", via: %i[get post], as: :auth_logout
+      post "auth/clear_service", to: "mcp_servers/auth#clear_service", as: :auth_clear_service
 
       get "auth/authorize", to: "mcp_servers/oauth#authorize"
       post "auth/register", to: "mcp_servers/oauth#register"

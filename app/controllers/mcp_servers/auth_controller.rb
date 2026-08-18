@@ -51,6 +51,15 @@ module McpServers
       redirect_to auth_mcp_server_path(@server.code), notice: "Revoked #{count} MCP tokens"
     end
 
+    def clear_service
+      @server.clear_credentials!
+      redirect_to auth_mcp_server_path(@server.code),
+                  notice: "Service credentials cleared — authenticate again below " \
+                          "(Save credentials or Retrieve OAuth token)."
+    rescue StandardError => e
+      redirect_to auth_mcp_server_path(@server.code), alert: e.message
+    end
+
     private
 
     def load_server

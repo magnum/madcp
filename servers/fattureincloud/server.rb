@@ -64,8 +64,10 @@ module Madcp
             steps: [
               "Configure FATTUREINCLOUD_CLIENT_ID and FATTUREINCLOUD_CLIENT_SECRET.",
               "Register the callback URL shown below in the Fatture in Cloud application.",
-              "Choose Retrieve OAuth token (you are already signed in with MadCP Basic Auth).",
-              "On the callback page, confirm the token was saved (or paste it once) and return here.",
+              "Choose Retrieve OAuth token (you are already signed in with MadCP).",
+              "After the callback, the access token is stored in FATTUREINCLOUD_TOKEN " \
+                "(shown in the Access token field). Optionally set Default company ID " \
+                "(FATTUREINCLOUD_COMPANY_ID) separately.",
             ],
             commands: [],
             note: "MadCP stores the full OAuth token response (including refresh_token) under " \
@@ -82,7 +84,8 @@ module Madcp
               label: "Fatture in Cloud access token",
               type: "password",
               required: false,
-              help: "Paste an OAuth access token, or use Retrieve OAuth token below.",
+              help: "Filled by Retrieve OAuth token (stored as FATTUREINCLOUD_TOKEN). " \
+                    "You can also paste a token manually. Leave blank when saving to keep the current token.",
               env: "FATTUREINCLOUD_TOKEN",
             },
             {
@@ -90,7 +93,7 @@ module Madcp
               label: "Default company ID (optional)",
               type: "text",
               required: false,
-              help: "Used when a company-scoped tool omits company_id.",
+              help: "Numeric company id only (FATTUREINCLOUD_COMPANY_ID). Not the OAuth access token.",
               env: "FATTUREINCLOUD_COMPANY_ID",
             },
           ]
@@ -113,13 +116,23 @@ module Madcp
         end
 
         def apply_credentials(params)
+          load_credentials!
           token = Madcp.sanitize_env_value(params["fattureincloud_token"])
           company_id = Madcp.sanitize_env_value(params["fattureincloud_company_id"])
+
+          updates = {}
+          updates["FATTUREINCLOUD_TOKEN"] = token if token.present?
+          # Allow clearing company id only when the field is submitted blank *and* was intentionally
+          # present in the form — blank means keep existing default.
+          updates["FATTUREINCLOUD_COMPANY_ID"] = company_id if params.key?("fattureincloud_company_id") && company_id.present?
+          # If company id field is present and blank, keep existing (do not wipe).
+
+          effective_token = updates["FATTUREINCLOUD_TOKEN"].presence ||
+            Madcp.sanitize_env_value(ENV["FATTUREINCLOUD_TOKEN"])
+          raise "Fatture in Cloud access token is required" if effective_token.empty?
+
           apply_credentials_probe!(
-            {
-              "FATTUREINCLOUD_TOKEN" => token,
-              "FATTUREINCLOUD_COMPANY_ID" => company_id,
-            },
+            updates.merge("FATTUREINCLOUD_TOKEN" => effective_token),
             rejection_message: "Fatture in Cloud token was rejected",
           )
         ensure

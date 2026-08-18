@@ -100,12 +100,21 @@
               class: "w-full rounded-lg border border-stone-300 px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950",
               autocomplete: "off",
               placeholder: (@server.respond_to?(:cli_credentials_present?) && @server.cli_credentials_present? ? "credentials.json already on server — leave blank to keep" : nil) %>
-      <% else %>
-        <%= text_field_tag field[:name], (password ? nil : stored),
-              type: password ? "password" : "text",
+      <% elsif password %>
+        <%= password_field_tag field[:name], nil,
               class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
-              autocomplete: "off",
-              placeholder: (password && stored.present? ? "•••••••• (saved — leave blank to keep)" : nil) %>
+              autocomplete: "new-password",
+              placeholder: (stored.present? ? "•••••••• saved — leave blank to keep" : "Paste token or use Retrieve OAuth token") %>
+        <% if stored.present? %>
+          <p class="mt-1 text-sm text-emerald-800 dark:text-emerald-300">
+            Saved in <code><%= field[:env] %></code> (<%= stored.length %> characters).
+          </p>
+        <% end %>
+      <% else %>
+        <%= text_field_tag field[:name], stored,
+              type: "text",
+              class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
+              autocomplete: "off" %>
       <% end %>
       <% if field[:help].present? %>
         <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
@@ -116,7 +125,22 @@
   <%= submit_tag "Save credentials", class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
 <% end %>
 
-<div class="mt-10">
+<div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+  <%= button_to "Re-authenticate service", auth_clear_service_mcp_server_path(@server.code),
+        method: :post,
+        data: {
+          turbo_confirm: "Clear this integration’s stored service credentials? " \
+                         "MCP client sessions stay active. You will need to authenticate the service again.",
+        },
+        class: "cursor-pointer rounded-lg border border-amber-700 bg-amber-50 px-4 py-2 font-semibold text-amber-950 dark:bg-amber-950 dark:text-amber-100" %>
   <%= button_to "Revoke MCP sessions", auth_logout_mcp_server_path(@server.code),
-        method: :post, class: "cursor-pointer rounded-lg border border-stone-400 px-4 py-2" %>
+        method: :post,
+        data: {
+          turbo_confirm: "Revoke all MCP client sessions for this server?",
+        },
+        class: "cursor-pointer rounded-lg border border-stone-400 px-4 py-2" %>
 </div>
+<p class="mt-3 text-sm text-stone-600">
+  <span class="font-semibold">Re-authenticate service</span> clears provider credentials (token, CLI file, OAuth tokens)
+  so you can log in again. <span class="font-semibold">Revoke MCP sessions</span> only disconnects MCP clients from MadCP.
+</p>
