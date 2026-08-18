@@ -15,10 +15,20 @@ module McpServers
     end
 
     def status
-      render json: @server.auth_status(force: params[:refresh].present?).merge(
-        server_id: @server.code,
-        refreshed: params[:refresh].present?,
-      )
+      @status = @server.auth_status(force: params[:refresh].present?)
+
+      respond_to do |format|
+        format.html do
+          render partial: "mcp_servers/auth_status_badge",
+                 locals: { server: @server, status: @status }
+        end
+        format.json do
+          render json: @status.merge(
+            server_id: @server.code,
+            refreshed: params[:refresh].present?,
+          )
+        end
+      end
     end
 
     def credentials

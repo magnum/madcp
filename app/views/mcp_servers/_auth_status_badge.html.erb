@@ -1,0 +1,16 @@
+<%# locals: server, status %>
+<%= turbo_frame_tag dom_id(server, :auth_status) do %>
+  <% if status[:authenticated] %>
+    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-700 bg-emerald-50 text-emerald-900 md:w-auto md:px-4 dark:bg-emerald-950 dark:text-emerald-100"
+          title="Authenticated">
+      <span class="hidden md:inline">Authenticated</span>
+      <span class="md:hidden">✓</span>
+    </span>
+  <% else %>
+    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-amber-700 bg-amber-50 text-amber-950 md:w-auto md:px-4 dark:bg-amber-950 dark:text-amber-100"
+          title="Not authenticated">
+      <span class="hidden md:inline">Not authenticated</span>
+      <span class="md:hidden">✕</span>
+    </span>
+  <% end %>
+<% end %>
