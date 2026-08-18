@@ -19,6 +19,17 @@ class McpServerTest < ActiveSupport::TestCase
     assert_instance_of Madcp::Servers::TeslaMate::Server, server
   end
 
+  test "token_refresh_in_minutes blank disables scheduled refresh" do
+    server = McpServer.fetch!("hey")
+    server.update!(token_refresh_in_minutes: "")
+    assert_nil server.reload.token_refresh_in_minutes
+    refute server.token_refresh_enabled?
+
+    server.update!(token_refresh_in_minutes: 60)
+    assert_equal 60, server.token_refresh_in_minutes
+    assert server.token_refresh_enabled?
+  end
+
   test "teslamate tool catalog includes reports and run_sql" do
     server = McpServer.fetch!("teslamate")
     names = server.tool_catalog.map { |tool| tool[:name] }

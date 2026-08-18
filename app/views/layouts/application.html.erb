@@ -9,6 +9,17 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <script>
+      (() => {
+        let savedTheme = null
+        try { savedTheme = localStorage.getItem("madcp-theme") } catch (_error) {}
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+        if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+          document.documentElement.classList.add("dark")
+        }
+      })()
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,28 +38,40 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-gray-50 font-sans">
-    <header class="bg-white border-b border-gray-200">
-      <nav class="container mx-auto px-4 py-3 flex items-center justify-between">
+  <body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+    <header class="border-b border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-950" data-controller="theme">
+      <nav class="container mx-auto flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-4">
-          <%= link_to Settings.app.name, root_path, class: "text-2xl font-semibold text-gray-900" %>
+          <%= link_to Settings.app.name, root_path, class: "text-2xl font-semibold text-gray-900 dark:text-zinc-100" %>
         </div>
         <div class="flex items-center gap-4">
           <%= render "shared/locale_select" %>
           <% if signed_in? %>
             <% if current_user.admin? %>
-              <%= link_to "Admin", admin_root_path, class: "hidden md:inline text-base font-medium text-gray-700 hover:text-gray-900" %>
-              <%= link_to t("users.index.title"), users_path, class: "hidden md:inline text-base font-medium text-gray-700 hover:text-gray-900" %>
+              <%= link_to "Admin", admin_root_path, class: "hidden md:inline text-base font-medium text-gray-700 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100" %>
+              <%= link_to t("users.index.title"), users_path, class: "hidden md:inline text-base font-medium text-gray-700 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100" %>
             <% end %>
             <%= link_to user_path(current_user), class: "flex items-center gap-2" do %>
               <%= render "users/avatar", user: current_user %>
-              <span class="hidden sm:inline text-base text-gray-600"><%= current_user.email %></span>
+              <span class="hidden sm:inline text-base text-gray-600 dark:text-zinc-400"><%= current_user.email %></span>
             <% end %>
-            <%= button_to t("sessions.sign_out"), sign_out_path, method: :delete, class: "text-base font-medium text-gray-700 hover:text-gray-900 bg-transparent border-0 p-0 cursor-pointer inline" %>
+            <%= button_to t("sessions.sign_out"), sign_out_path, method: :delete, class: "text-base font-medium text-gray-700 hover:text-gray-900 bg-transparent border-0 p-0 cursor-pointer inline dark:text-zinc-300 dark:hover:text-zinc-100" %>
           <% else %>
             <%= link_to t("sessions.sign_in"), sign_in_path, class: "btn-default" %>
             <%= link_to t("views.invitations.use_invitation_code"), invitation_consume_path, class: "btn-primary" %>
           <% end %>
+          <button type="button"
+                  data-action="theme#toggle"
+                  class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+                  title="Switch color theme"
+                  aria-label="Switch color theme">
+            <span class="dark:hidden">
+              <%= heroicon "moon", options: { class: "h-5 w-5" } %>
+            </span>
+            <span class="hidden dark:inline">
+              <%= heroicon "sun", options: { class: "h-5 w-5" } %>
+            </span>
+          </button>
         </div>
       </nav>
     </header>
@@ -59,7 +82,7 @@
       </div>
     <% end %>
 
-    <main class="container mx-auto mt-8 px-5 flex">
+    <main class="container mx-auto mt-8 px-5">
       <%= yield %>
     </main>
   </body>

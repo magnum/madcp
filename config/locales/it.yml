@@ -53,6 +53,8 @@ it:
 
   activerecord:
     attributes:
+      mcp_server:
+        token_refresh_in_minutes: "Intervallo rinnovo token (minuti)"
       user:
         id: "ID"
         firstname: "Nome"

@@ -11,6 +11,17 @@ class McpOauthProvider
   AUTH_CODE_TTL = 300
   STATE_TTL = 600
 
+  def self.access_ttl_seconds(minutes)
+    minutes = minutes.to_i
+    return ACCESS_TTL unless minutes.positive?
+
+    (minutes * 60) + ACCESS_TTL
+  end
+
+  def self.refresh_ttl_seconds(minutes)
+    [ REFRESH_TTL, access_ttl_seconds(minutes) ].max
+  end
+
   class OAuthError < StandardError
     attr_reader :status, :code
 
@@ -164,10 +175,12 @@ class McpOauthProvider
   def load_access_token(token)
     return nil if token.to_s.empty?
 
-    api_key = ApiKey.where(revoked_at: nil)
-      .where("expires_at is NULL OR expires_at > ?", Time.zone.now)
-      .find_by_token(token)
-    return { subject: "api_key:#{api_key.id}", expires_at: nil } if api_key
+    if ApiKey::HMAC_SECRET_KEY.present?
+      api_key = ApiKey.where(revoked_at: nil)
+        .where("expires_at is NULL OR expires_at > ?", Time.zone.now)
+        .find_by_token(token)
+      return { subject: "api_key:#{api_key.id}", expires_at: nil } if api_key
+    end
 
     row = @server.mcp_oauth_access_tokens.active.find_by(token: token)
     return nil unless row
@@ -203,7 +216,7 @@ class McpOauthProvider
     raise OAuthError.new(400, "invalid_grant", "PKCE verification failed") unless Madcp.secure_equals(expected, data.code_challenge)
 
     data.destroy!
-    issue_tokens(client)
+    issue_tokens(client, rotate_refresh: false)
   end
 
   def exchange_refresh(params)
@@ -214,7 +227,7 @@ class McpOauthProvider
     raise OAuthError.new(400, "invalid_grant", "client mismatch") unless data.mcp_oauth_client_id == client.id
 
     data.destroy!
-    issue_tokens(client)
+    issue_tokens(client, rotate_refresh: true)
   end
 
   def authenticate_client(params)
@@ -227,28 +240,48 @@ class McpOauthProvider
     client
   end
 
-  def issue_tokens(client)
-    access = "madcp_#{SecureRandom.hex(32)}"
-    refresh = "madcp_rt_#{SecureRandom.hex(32)}"
-    @server.mcp_oauth_access_tokens.create!(
-      mcp_oauth_client: client,
-      token: access,
-      scope: scope,
-      expires_at: ACCESS_TTL.seconds.from_now,
-    )
-    @server.mcp_oauth_refresh_tokens.create!(
-      mcp_oauth_client: client,
-      token: refresh,
-      scope: scope,
-      expires_at: REFRESH_TTL.seconds.from_now,
-    )
+  def issue_tokens(client, rotate_refresh: false)
+    access_ttl = self.class.access_ttl_seconds(@server.token_refresh_in_minutes)
+    refresh_ttl = self.class.refresh_ttl_seconds(@server.token_refresh_in_minutes)
+    access = upsert_access_token(client, ttl: access_ttl)
+    refresh = upsert_refresh_token(client, ttl: refresh_ttl, rotate: rotate_refresh)
+    access.schedule_refresh_job!
     {
-      access_token: access,
-      refresh_token: refresh,
+      access_token: access.token,
+      refresh_token: refresh.token,
       token_type: "Bearer",
-      expires_in: ACCESS_TTL,
+      expires_in: access_ttl,
       scope: scope,
     }
+  end
+
+  def upsert_access_token(client, ttl:)
+    relation = @server.mcp_oauth_access_tokens.where(mcp_oauth_client: client)
+    record = relation.order(:id).last
+    relation.where.not(id: record.id).delete_all if record
+    record ||= @server.mcp_oauth_access_tokens.new(mcp_oauth_client: client)
+    record.token = "madcp_#{SecureRandom.hex(32)}" if record.token.blank?
+    record.scope = scope
+    record.expires_at = ttl.seconds.from_now
+    record.save!
+    record
+  end
+
+  def upsert_refresh_token(client, ttl:, rotate:)
+    relation = @server.mcp_oauth_refresh_tokens.where(mcp_oauth_client: client)
+    if rotate
+      relation.delete_all
+      record = @server.mcp_oauth_refresh_tokens.new(mcp_oauth_client: client)
+    else
+      record = relation.order(:id).last
+      relation.where.not(id: record.id).delete_all if record
+      record ||= @server.mcp_oauth_refresh_tokens.new(mcp_oauth_client: client)
+    end
+    record.token = "madcp_rt_#{SecureRandom.hex(32)}" if record.token.blank?
+    record.scope = scope
+    record.expires_at = ttl.seconds.from_now
+    record.save!
+    record
   end
 
   def append_query(url, values)

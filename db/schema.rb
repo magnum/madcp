@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_221334) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -136,6 +136,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_221334) do
     t.string "name", null: false
     t.text "oauth_token_payload"
     t.boolean "oauth_token_retrieval", default: false, null: false
+    t.integer "token_refresh_in_minutes"
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.string "version", default: "0.1.0", null: false

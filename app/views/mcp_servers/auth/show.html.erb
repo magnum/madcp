@@ -42,25 +42,25 @@
       <% end %>
     </div>
   <% end %>
-  <%= submit_tag "Save credentials", class: "rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
+  <%= submit_tag "Save credentials", class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
 <% end %>
 
 <% if @state.present? %>
   <div class="mt-8">
     <%= button_to "Continue to MCP client", auth_continue_mcp_server_path(@server.code),
           method: :post, params: { state: @state },
-          class: "rounded-lg border-2 border-stone-950 px-4 py-2 font-bold" %>
+          class: "cursor-pointer rounded-lg border-2 border-stone-950 px-4 py-2 font-bold" %>
   </div>
 <% end %>
 
 <% if @server.oauth_token_retrieval? %>
   <div class="mt-8">
     <%= button_to "Retrieve OAuth token", provider_oauth_mcp_server_path(@server.code),
-          method: :post, class: "rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50" %>
+          method: :post, class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50" %>
   </div>
 <% end %>
 
 <div class="mt-10">
   <%= button_to "Revoke MCP sessions", auth_logout_mcp_server_path(@server.code),
-        method: :post, class: "rounded-lg border border-stone-400 px-4 py-2" %>
+        method: :post, class: "cursor-pointer rounded-lg border border-stone-400 px-4 py-2" %>
 </div>

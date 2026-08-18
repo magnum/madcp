@@ -55,7 +55,9 @@ end
 
 Madcp.apply_env_sanitization!
 
-Rails.application.config.after_initialize do
+# to_prepare re-runs after each code reload in development so STI subclasses
+# under servers/ are rebound to the current McpServer class.
+Rails.application.config.to_prepare do
   next unless ActiveRecord::Base.connection.data_source_exists?("mcp_servers")
 
   McpServer.discover!

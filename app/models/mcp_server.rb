@@ -21,6 +21,11 @@ class McpServer < ApplicationRecord
   validates :code, presence: true, uniqueness: true
   validates :name, presence: true
   validates :type, presence: true
+  validates :token_refresh_in_minutes,
+            numericality: { only_integer: true, greater_than: 0 },
+            allow_nil: true
+
+  before_validation :normalize_token_refresh_in_minutes
 
   after_initialize :prepare_runtime
   after_find :prepare_runtime
@@ -77,12 +82,43 @@ class McpServer < ApplicationRecord
       integration_classes << klass unless integration_classes.include?(klass)
     end
 
+    # servers/ is outside Zeitwerk. After a reload, McpServer is a new class while
+    # previously required Madcp::Servers::* still subclass the old one — break STI.
     def discover!
-      Rails.root.glob("servers/*/server.rb").sort.each do |path|
-        require path
-      end
+      ensure_integrations_loaded!
       sync_from_registry!
     end
+
+    def ensure_integrations_loaded!
+      if Rails.application.config.cache_classes
+        load_integration_code! if integration_classes.empty?
+      else
+        reload_integration_code!
+      end
+    end
+
+    def load_integration_code!
+      Rails.root.glob("servers/*/server.rb").sort.each { |path| require path.to_s }
+    end
+
+    def reload_integration_code!
+      @integration_classes = []
+      unload_servers_namespace!
+      clear_servers_loaded_features!
+      load_integration_code!
+    end
+
+    def unload_servers_namespace!
+      return unless Madcp.const_defined?(:Servers, false)
+
+      Madcp.send(:remove_const, :Servers)
+    end
+
+    def clear_servers_loaded_features!
+      root = Rails.root.join("servers").to_s
+      $LOADED_FEATURES.reject! { |feature| feature.start_with?(root) }
+    end
+    private :unload_servers_namespace!, :clear_servers_loaded_features!
 
     def sync_from_registry!
       now = Time.current
@@ -125,6 +161,7 @@ class McpServer < ApplicationRecord
   def display_name = name
   def oauth_token_retrieval? = oauth_token_retrieval
   def allow_write_methods? = allow_write?
+  def token_refresh_enabled? = token_refresh_in_minutes.to_i.positive?
 
   def instructions = "#{display_name} MCP integration."
   def auth_fields = []
@@ -171,6 +208,10 @@ class McpServer < ApplicationRecord
     JSON.parse(raw)
   rescue JSON::ParserError
     {}
+  end
+
+  def normalize_token_refresh_in_minutes
+    self.token_refresh_in_minutes = nil unless token_refresh_in_minutes.to_i.positive?
   end
 
   def prepare_runtime

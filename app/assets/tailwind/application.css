@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @reference "tailwindcss";
 
+/* Class-based dark mode (html.dark), matching MadCP theme toggle */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  button:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 @theme {
   /* Primary color set to blue */
   --color-primary-500: #3b82f6; /* blue-500 */
