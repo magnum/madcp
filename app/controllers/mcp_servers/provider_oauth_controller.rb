@@ -10,6 +10,8 @@ module McpServers
     def create
       return unless oauth_token_retrieval_enabled?
 
+      mcp_server.prepare_provider_oauth!(params.to_unsafe_h)
+
       state = SecureRandom.hex(24)
       result = mcp_server.oauth_call(
         callback_url: "#{Madcp.public_url}/servers/#{mcp_server.code}/oauth_callback",

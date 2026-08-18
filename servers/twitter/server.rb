@@ -60,8 +60,9 @@ module Madcp
               "App permissions must cover your scopes (Read and write for MadCP defaults).",
               "Callback URI / Redirect URL must be EXACTLY the URL shown below (copy-paste).",
               "Also set Website URL (e.g. your MadCP public URL) — X often rejects auth without it.",
-              "Paste the OAuth 2.0 Client ID and Client Secret below (not the old API Key / Consumer Key), then Save credentials.",
-              "Choose Retrieve OAuth token, then confirm the token was saved on the callback page.",
+              "Paste the OAuth 2.0 Client ID and Client Secret below (not the old API Key / Consumer Key).",
+              "Choose Retrieve OAuth token — values from the fields above are used (and saved) for the flow.",
+              "Optionally paste a token manually and Save credentials, or confirm the token after the OAuth callback.",
             ],
             commands: [],
             note: "If X shows “Something went wrong / weren’t able to give access”, it is almost " \
@@ -78,7 +79,8 @@ module Madcp
               label: "OAuth 2.0 Client ID",
               type: "text",
               required: true,
-              help: "From X Developer Portal → Keys and tokens → OAuth 2.0 Client ID.",
+              oauth_app: true,
+              help: "From X Developer Portal → Keys and tokens → OAuth 2.0 Client ID. Form values override empty ENV.",
               env: "TWITTER_CLIENT_ID",
             },
             {
@@ -86,7 +88,8 @@ module Madcp
               label: "OAuth 2.0 Client Secret",
               type: "password",
               required: true,
-              help: "From X Developer Portal → Keys and tokens → OAuth 2.0 Client Secret.",
+              oauth_app: true,
+              help: "From X Developer Portal → Keys and tokens → OAuth 2.0 Client Secret. Leave blank to keep a saved secret.",
               env: "TWITTER_CLIENT_SECRET",
             },
             {
@@ -94,7 +97,7 @@ module Madcp
               label: "Twitter / X access token",
               type: "password",
               required: false,
-              help: "Optional: paste a user access token, or use Retrieve OAuth token below after saving Client ID/Secret.",
+              help: "Filled by Retrieve OAuth token, or paste a user access token and Save credentials.",
               env: "TWITTER_TOKEN",
             },
           ]
@@ -120,21 +123,26 @@ module Madcp
           { authenticated: false, error: e.message }
         end
 
-        def apply_credentials(params)
-          client_id = Madcp.sanitize_env_value(params["twitter_client_id"])
-          client_secret = Madcp.sanitize_env_value(params["twitter_client_secret"])
-          token = Madcp.sanitize_env_value(params["twitter_token"])
-          raise "TWITTER_CLIENT_ID is required" if client_id.empty?
-          raise "TWITTER_CLIENT_SECRET is required" if client_secret.empty?
+        def prepare_provider_oauth!(params)
+          persist_oauth_app_credentials!(params)
+          load_credentials!
+          replace_client!
+        end
 
-          updates = {
-            "TWITTER_CLIENT_ID" => client_id,
-            "TWITTER_CLIENT_SECRET" => client_secret,
-          }
+        def apply_credentials(params)
+          load_credentials!
+          updates = oauth_app_credential_updates(params)
+          token = Madcp.sanitize_env_value(params["twitter_token"])
+
+          effective_id = updates["TWITTER_CLIENT_ID"].presence ||
+            Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
+          effective_secret = updates["TWITTER_CLIENT_SECRET"].presence ||
+            Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
 
           if token.empty?
-            # App credentials only — needed before Retrieve OAuth token.
-            persist_credentials!(updates)
+            raise "TWITTER_CLIENT_ID is required" if effective_id.empty?
+            raise "TWITTER_CLIENT_SECRET is required" if effective_secret.empty?
+            persist_credentials!(updates) if updates.any?
             replace_client!
             true
           else
@@ -145,7 +153,6 @@ module Madcp
           end
         ensure
           token = nil
-          client_secret = nil
         end
 
         def clear_credentials!
@@ -161,8 +168,8 @@ module Madcp
           load_credentials!
           client_id = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
           client_secret = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
-          raise "TWITTER_CLIENT_ID is required — save it on this page first" if client_id.empty?
-          raise "TWITTER_CLIENT_SECRET is required — save it on this page first" if client_secret.empty?
+          raise "TWITTER_CLIENT_ID is required — enter it above and try Retrieve again" if client_id.empty?
+          raise "TWITTER_CLIENT_SECRET is required — enter it above and try Retrieve again" if client_secret.empty?
 
           code_verifier = pkce_verifier
           code_challenge = pkce_challenge(code_verifier)
@@ -225,6 +232,22 @@ module Madcp
         end
 
         private
+
+        def oauth_app_credential_updates(params)
+          updates = {}
+          client_id = Madcp.sanitize_env_value(params["twitter_client_id"])
+          client_secret = Madcp.sanitize_env_value(params["twitter_client_secret"])
+          updates["TWITTER_CLIENT_ID"] = client_id if client_id.present?
+          updates["TWITTER_CLIENT_SECRET"] = client_secret if client_secret.present?
+          updates
+        ensure
+          client_secret = nil
+        end
+
+        def persist_oauth_app_credentials!(params)
+          updates = oauth_app_credential_updates(params)
+          persist_credentials!(updates) if updates.any?
+        end
 
         def build_client
           Client.new(on_token_refresh: method(:persist_refreshed_token!))

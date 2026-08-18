@@ -172,6 +172,19 @@ class McpServer < ApplicationRecord
   def instructions = "#{display_name} MCP integration."
   def auth_fields = []
   def auth_help_content = nil
+
+  def oauth_app_auth_fields
+    auth_fields.select { |field| field[:oauth_app] }
+  end
+
+  def credential_auth_fields
+    auth_fields.reject { |field| field[:oauth_app] }
+  end
+
+  # Persist provider app credentials from the auth form before starting OAuth.
+  # Non-empty form values win over ENV / stored credentials; blank password fields keep existing.
+  def prepare_provider_oauth!(_params) = nil
+
   def configure_tools = raise(NotImplementedError)
   def apply_credentials(_params) = raise(NotImplementedError)
   def clear_credentials! = raise(NotImplementedError)

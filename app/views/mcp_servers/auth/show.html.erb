@@ -29,24 +29,8 @@
   </section>
 <% end %>
 
-<%= form_with url: auth_credentials_mcp_server_path(@server.code), method: :post, local: true, class: "space-y-4" do %>
-  <% @server.auth_fields.each do |field| %>
-    <div>
-      <%= label_tag field[:name], field[:label], class: "mb-2 block font-semibold" %>
-      <%= text_field_tag field[:name], @server.auth_field_value(field),
-            type: field[:type] == "password" ? "password" : "text",
-            class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
-            autocomplete: "off" %>
-      <% if field[:help].present? %>
-        <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
-      <% end %>
-    </div>
-  <% end %>
-  <%= submit_tag "Save credentials", class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
-<% end %>
-
 <% if @state.present? %>
-  <div class="mt-8">
+  <div class="mb-8">
     <%= button_to "Continue to MCP client", auth_continue_mcp_server_path(@server.code),
           method: :post, params: { state: @state },
           class: "cursor-pointer rounded-lg border-2 border-stone-950 px-4 py-2 font-bold" %>
@@ -55,16 +39,54 @@
 
 <% if @server.oauth_token_retrieval? %>
   <% callback_url = "#{Madcp.public_url}/servers/#{@server.code}/oauth_callback" %>
-  <div class="mt-8 rounded-lg border border-stone-300 bg-stone-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-    <p class="mb-2 font-semibold">Callback URI / Redirect URL</p>
-    <code class="block break-all text-sm"><%= callback_url %></code>
-    <p class="mt-2 text-sm text-stone-600">Register this exact URL in the provider developer portal.</p>
-  </div>
+  <%= form_with url: provider_oauth_mcp_server_path(@server.code), method: :post, local: true, class: "space-y-4" do %>
+    <% @server.oauth_app_auth_fields.each do |field| %>
+      <% stored = @server.auth_field_value(field) %>
+      <% password = field[:type] == "password" %>
+      <div>
+        <%= label_tag field[:name], field[:label], class: "mb-2 block font-semibold" %>
+        <%= text_field_tag field[:name], (password ? nil : stored),
+              type: password ? "password" : "text",
+              class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
+              autocomplete: "off",
+              required: field[:required] && !(password && stored.present?),
+              placeholder: (password && stored.present? ? "•••••••• (saved — leave blank to keep)" : nil) %>
+        <% if field[:help].present? %>
+          <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
+        <% end %>
+      </div>
+    <% end %>
 
-  <div class="mt-8">
-    <%= button_to "Retrieve OAuth token", provider_oauth_mcp_server_path(@server.code),
-          method: :post, class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50" %>
-  </div>
+    <div class="rounded-lg border border-stone-300 bg-stone-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+      <p class="mb-2 font-semibold">Callback URI / Redirect URL</p>
+      <code class="block break-all text-sm"><%= callback_url %></code>
+      <p class="mt-2 text-sm text-stone-600">Register this exact URL in the provider developer portal.</p>
+    </div>
+
+    <%= submit_tag "Retrieve OAuth token",
+          class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
+  <% end %>
+<% end %>
+
+<%= form_with url: auth_credentials_mcp_server_path(@server.code), method: :post, local: true, class: "mt-10 space-y-4" do %>
+  <% fields = @server.oauth_token_retrieval? ? @server.credential_auth_fields : @server.auth_fields %>
+  <% fields.each do |field| %>
+    <% stored = @server.auth_field_value(field) %>
+    <% password = field[:type] == "password" %>
+    <div>
+      <%= label_tag field[:name], field[:label], class: "mb-2 block font-semibold" %>
+      <%= text_field_tag field[:name], (password ? nil : stored),
+            type: password ? "password" : "text",
+            class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
+            autocomplete: "off",
+            placeholder: (password && stored.present? ? "•••••••• (saved — leave blank to keep)" : nil) %>
+      <% if field[:help].present? %>
+        <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= submit_tag "Save credentials", class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
 <% end %>
 
 <div class="mt-10">
