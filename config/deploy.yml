@@ -20,16 +20,16 @@ servers:
       health-cmd: "sh -c 'date'"
     cmd: bin/rails solid_queue:start
 
-# Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
-# If used with Cloudflare, set encryption mode in SSL/TLS setting to "Full" to enable CF-to-app encryption.
+# Traffico HTTPS termina su Cloudflare/cloudflared; kamal-proxy ascolta solo HTTP
+# sulla porta host 8001 (cloudflared → 192.168.0.92:8001 → app).
 #
-# Using an SSL proxy like this requires turning on config.assume_ssl and config.force_ssl in production.rb!
-#
-# Don't use this when deploying to multiple web servers (then you have to terminate SSL at your load balancer).
-#
+# Con SSL terminato a monte, abilita config.assume_ssl in production.rb.
 proxy:
-  ssl: true
+  ssl: false
   host: madcp.m6i.it
+  forward_headers: true
+  run:
+    http_port: 8001
 
 # Where you keep your container images.
 registry:
