@@ -7,6 +7,44 @@
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
+# --- MCP CLI binaries (hey, basecamp, gws) ---
+FROM golang:1.26-bookworm AS basecamp-build
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --depth 1 https://github.com/basecamp/basecamp-cli .
+RUN CGO_ENABLED=0 go build -trimpath -o /out/basecamp ./cmd/basecamp \
+    || CGO_ENABLED=0 go build -trimpath -o /out/basecamp .
+
+FROM golang:1.26-bookworm AS hey-build
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --depth 1 https://github.com/basecamp/hey-cli .
+RUN CGO_ENABLED=0 go build -trimpath -o /out/hey ./cmd/hey \
+    || CGO_ENABLED=0 go build -trimpath -o /out/hey .
+
+FROM debian:bookworm-slim AS gws-download
+ARG TARGETARCH
+ARG GWS_VERSION=0.22.5
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp
+RUN case "${TARGETARCH}" in \
+      amd64) target="x86_64-unknown-linux-musl" ;; \
+      arm64) target="aarch64-unknown-linux-musl" ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && archive="google-workspace-cli-${target}.tar.gz" \
+    && url="https://github.com/googleworkspace/cli/releases/download/v${GWS_VERSION}" \
+    && curl -fsSLO "${url}/${archive}" \
+    && curl -fsSLO "${url}/${archive}.sha256" \
+    && sha256sum -c "${archive}.sha256" \
+    && tar -xzf "${archive}" \
+    && mkdir -p /out \
+    && install -m 0755 gws /out/gws
+
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
 ARG RUBY_VERSION=4.0.5
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
@@ -16,16 +54,22 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips libsqlite3-0 && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips libsqlite3-0 ca-certificates && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment variables and enable jemalloc for reduced memory usage and latency.
+# CLI config/cache live under the mounted storage volume so tokens survive deploys.
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
+    HOME="/rails/storage/home" \
+    HEY_NO_KEYRING="1" \
+    BASECAMP_NO_KEYRING="1" \
+    GOOGLE_WORKSPACE_CLI_CONFIG_DIR="/rails/storage/home/.config/gws" \
+    GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND="file"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -59,6 +103,11 @@ RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Final stage for app image
 FROM base
+
+# MCP CLI binaries
+COPY --from=basecamp-build /out/basecamp /usr/local/bin/basecamp
+COPY --from=hey-build /out/hey /usr/local/bin/hey
+COPY --from=gws-download /out/gws /usr/local/bin/gws
 
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \

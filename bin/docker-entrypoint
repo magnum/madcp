@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+# Persist CLI home/config on the Kamal storage volume (hey / basecamp / gws).
+mkdir -p /rails/storage/home/.config/gws /rails/storage/home/.cache
+
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
