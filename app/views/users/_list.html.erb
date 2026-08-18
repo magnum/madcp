@@ -1,0 +1,58 @@
+<%
+  grid_class = "1fr_2fr_2fr_2fr_3fr"
+%>
+
+<div class="">
+  <!-- Header - visible only on md and larger screens -->
+  <div class="hidden md:grid md:grid-cols-[<%= grid_class %>] gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200">
+    <div class="text-sm font-medium text-gray-500 uppercase tracking-wider"><%= t("activerecord.attributes.user.id") %></div>
+    <div class="text-sm font-medium text-gray-500 uppercase tracking-wider"><%= t("activerecord.attributes.user.firstname") %></div>
+    <div class="text-sm font-medium text-gray-500 uppercase tracking-wider"><%= t("activerecord.attributes.user.lastname") %></div>
+    <div class="text-sm font-medium text-gray-500 uppercase tracking-wider"><%= t("activerecord.attributes.user.email") %></div>
+    <div class="text-sm font-medium text-gray-500 uppercase tracking-wider text-right"></div>
+  </div>
+
+  <!-- Body -->
+  <div class="">
+    <% if users.any? %>
+      <% users.each do |user| %>
+        <div class="grid grid-cols-1 md:grid-cols-[<%= grid_class %>] gap-4 px-6 py-4 hover:bg-gray-100 items-center md:mb-0 mb-4 bg-white md:shadow-sm">
+          <div class="flex md:justify-start">
+            <label class="list-label min-w-32"><%= t("activerecord.attributes.user.id") %></label>
+            <span class="text-base text-gray-500"><%= user.id %></span>
+          </div>
+          <div class="flex md:justify-start">
+            <label class="list-label min-w-32"><%= t("activerecord.attributes.user.firstname") %></label>
+            <% if policy(user).show? %>
+              <%= link_to user.firstname, user, class: "text-base font-medium text-gray-900 hover:underline" %>
+            <% else %>
+              <span class="text-base text-gray-900"><%= user.firstname %></span>
+            <% end %>
+          </div>
+          <div class="flex md:justify-start">
+            <label class="list-label min-w-32"><%= t("activerecord.attributes.user.lastname") %></label>
+            <span class="text-base text-gray-900"><%= user.lastname %></span>
+          </div>
+          <div class="flex md:justify-start">
+            <label class="list-label min-w-32"><%= t("activerecord.attributes.user.email") %></label>
+            <span class="text-base text-gray-500 truncate"><%= user.email %></span>
+          </div>
+          <div class="flex justify-end md:justify-end">
+            <div class="text-base font-medium ml-auto">
+              <% if policy(user).show? %>
+                <%= link_to t("users.actions.show"), user, class: "text-gray-900 hover:underline mr-3" %>
+              <% end %>
+              <% if policy(user).edit? %>
+                <%= link_to t("users.actions.edit"), edit_user_path(user), class: "text-gray-900 hover:underline mr-3" %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="px-6 py-4 text-center text-base text-gray-500">
+        <%= t("users.index.no_users_found") %>
+      </div>
+    <% end %>
+  </div>
+</div>

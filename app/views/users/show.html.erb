@@ -1,0 +1,54 @@
+<div class="w-full max-w-4xl">
+  <div class="bg-white shadow-sm rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-900"><%= t("users.show.title") %></h1>
+      <div class="flex gap-2">
+        <% if policy(@user).edit? %>
+          <%= link_to t("users.actions.edit"), edit_user_path(@user), class: "btn-primary" %>
+        <% end %>
+        <% if current_user.admin? %>
+          <%= link_to t("users.show.back_to_list"), users_path, class: "btn-default" %>
+        <% else %>
+          <%= link_to t("users.show.back_to_home"), root_path, class: "btn-default" %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-4 mb-6">
+        <%= render "users/avatar", user: @user, size: "w-16 h-16" %>
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900"><%= @user.full_name %></h2>
+          <p class="text-base text-gray-500"><%= @user.email %></p>
+        </div>
+      </div>
+
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-base font-medium text-gray-500"><%= t("activerecord.attributes.user.firstname") %></dt>
+          <dd class="mt-1 text-base text-gray-900"><%= @user.firstname %></dd>
+        </div>
+
+        <div>
+          <dt class="text-base font-medium text-gray-500"><%= t("activerecord.attributes.user.lastname") %></dt>
+          <dd class="mt-1 text-base text-gray-900"><%= @user.lastname %></dd>
+        </div>
+
+        <div class="sm:col-span-2">
+          <dt class="text-base font-medium text-gray-500"><%= t("activerecord.attributes.user.email") %></dt>
+          <dd class="mt-1 text-base text-gray-900"><%= @user.email %></dd>
+        </div>
+
+        <div>
+          <dt class="text-base font-medium text-gray-500"><%= t("activerecord.attributes.user.created_at") %></dt>
+          <dd class="mt-1 text-base text-gray-900"><%= @user.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
+        </div>
+
+        <div>
+          <dt class="text-base font-medium text-gray-500"><%= t("activerecord.attributes.user.updated_at") %></dt>
+          <dd class="mt-1 text-base text-gray-900"><%= @user.updated_at.strftime("%d/%m/%Y %H:%M") %></dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>

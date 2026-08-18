@@ -1,0 +1,8 @@
+<div class="field-unit__label">
+  <%= f.label field.attribute %>
+</div>
+<div class="field-unit__field">
+    <% options = field.resource.class.send(field.attribute.to_s.pluralize).transform_values(&:to_i) %>
+    <%= options %>
+    <%= f.select field.attribute, options, { include_blank: true, selected: f.object.send(field.attribute) } %>
+</div>

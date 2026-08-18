@@ -7,18 +7,19 @@ require_relative "postgres_client"
 module Madcp
   module Servers
     module TeslaMate
-      class Server < Integration
+      class Server < ::McpServer
         server_id "teslamate"
         display_name "TeslaMate"
         description "Read TeslaMate PostgreSQL analytics: drives, charging, battery health, and custom SQL."
         version "0.1.0"
 
         QUERIES_DIR = File.expand_path("queries", __dir__)
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = build_client
-          @predefined = QueryRegistry.load(QUERIES_DIR)
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions
@@ -132,6 +133,7 @@ module Madcp
 
         def replace_client!
           @client = build_client
+          @predefined = QueryRegistry.load(QUERIES_DIR)
         end
 
         private

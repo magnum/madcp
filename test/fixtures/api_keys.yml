@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  bearer: one
+  bearer_type: User
+  common_token_prefix: tkn_usr
+  random_token_prefix: prefone
+  token_digest: digest_one_unique_value
+  expires_at:
+  revoked_at:
+
+two:
+  bearer: two
+  bearer_type: User
+  common_token_prefix: tkn_usr
+  random_token_prefix: preftwo
+  token_digest: digest_two_unique_value
+  expires_at:
+  revoked_at:

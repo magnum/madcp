@@ -9,7 +9,7 @@ require_relative "twitter_client"
 module Madcp
   module Servers
     module Twitter
-      class Server < Integration
+      class Server < ::McpServer
         server_id "twitter"
         display_name "Twitter / X"
         description "Users, posts, timelines, search, likes, follows, and bookmarks through the X API v2."
@@ -32,10 +32,12 @@ module Madcp
 
         DEFAULT_TWEET_FIELDS = "created_at,public_metrics,lang,conversation_id,in_reply_to_user_id,referenced_tweets"
         DEFAULT_USER_FIELDS = "created_at,description,public_metrics,verified,profile_image_url"
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = build_client
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions

@@ -1,0 +1,8 @@
+<% current_locale = I18n.locale.to_s %>
+<select
+  class="locale-select border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+  onchange="if (this.value) window.location.href = this.value">
+  <% I18n.available_locales.each do |loc| %>
+    <option value="<%= set_session_locale_path(locale: loc) %>" <%= "selected" if current_locale == loc.to_s %>><%= loc.to_s.upcase %></option>
+  <% end %>
+</select>

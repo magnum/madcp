@@ -1,0 +1,6 @@
+# MadCP operator users — HTTP Basic Auth (username:password)
+# Format: username:hmac_sha256_hex # label
+# Disable a line by prefixing with #
+# Digests: HMAC-SHA256(MADCP_SECRET_KEY, password) hex
+
+user1:491a14503cb77e6156086fa15743e09de8105f03db66d91ecdf7cce6a597fa8a # user1

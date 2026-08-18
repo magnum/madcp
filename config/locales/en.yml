@@ -1,0 +1,125 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
+en:
+  hello: "Hello"
+
+  home:
+    welcome: "Welcome to your application."
+    sign_in_prompt: "Sign in or create an account to continue."
+
+  views:
+    common:
+      or: "Or"
+    errors:
+      fix_errors: "Please fix the following errors:"
+    invitations:
+      consume_title: "Enter invitation code"
+      consume_intro: "Enter your invitation code to create an account."
+      invitation_code: "Invitation code"
+      invitation_code_placeholder: "e.g. abc123"
+      continue_to_sign_up: "Continue to sign up"
+      use_invitation_code: "Use invitation code"
+      invitation_accepted: "Invitation accepted. You can now create your account."
+      invitation_invalid: "Invalid or expired invitation code."
+      requires_invitation: "You need a valid invitation to sign up."
+      back_to_home: "Back to home"
+    auth:
+      not_authorized: "You are not authorized to access this area."
+    admin:
+      event_success: "%{event} completed successfully."
+      event_fail: "%{event} failed: %{message}"
+
+  authentication:
+    require_sign_in: "You must be signed in to continue."
+    already_signed_in: "You are already signed in."
+
+  sessions:
+    sign_in: "Sign in"
+    sign_out: "Sign out"
+    signed_in: "Signed in successfully."
+    signed_out: "Signed out successfully."
+    invalid_credentials: "Invalid email or password."
+    oauth_failure: "Authentication with Google failed."
+    or_continue: "Or continue with"
+    connect_google: "Connect with Google"
+    no_account: "Don't have an account?"
+
+  activerecord:
+    attributes:
+      mcp_server:
+        token_refresh_in_minutes: "Token refresh (minutes)"
+      user:
+        id: "ID"
+        firstname: "First name"
+        lastname: "Last name"
+        email: "Email"
+        created_at: "Created at"
+        updated_at: "Updated at"
+    errors:
+      models:
+        invitation:
+          attributes:
+            valid_to:
+              valid_to_after_valid_from: "must be after valid from"
+
+  common:
+    cancel: "Cancel"
+
+  users:
+    index:
+      title: "Users"
+      no_users_found: "No users found."
+    show:
+      title: "Profile"
+      back_to_list: "Back to list"
+      back_to_home: "Back to home"
+    edit:
+      title: "Edit profile"
+      submit: "Update"
+    actions:
+      show: "Show"
+      edit: "Edit"
+    updated: "Profile updated successfully."
+
+  registrations:
+    sign_up: "Sign up"
+    created: "Account created successfully."
+    firstname: "First name"
+    lastname: "Last name"
+    email: "Email"
+    password: "Password"
+    password_confirmation: "Confirm password"
+    or_continue: "Or continue with"
+    connect_google: "Connect with Google"
+    no_account: "Don't have an account?"
+    has_account: "Already have an account?"
+    errors_prohibited:
+      one: "1 error prohibited this account from being saved:"
+      other: "%{count} errors prohibited this account from being saved:"

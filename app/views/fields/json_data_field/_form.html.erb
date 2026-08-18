@@ -1,0 +1,12 @@
+<div class="field-unit__label">
+  <%= f.label field.attribute %>
+</div>
+<div class="field-unit__field">
+  <%= f.text_area field.attribute, value: field.data %>
+</div>
+
+<style>
+  textarea[name="document[data]"] {
+    height: 400px;
+  }
+</style>

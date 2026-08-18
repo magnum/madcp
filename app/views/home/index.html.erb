@@ -1,0 +1,17 @@
+<div class="max-w-2xl mx-auto text-center">
+  <% if signed_in? %>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-2">
+      <%= t("hello") %>, <%= current_user.firstname %>!
+    </h1>
+    <p class="text-gray-600 mb-4">
+      <%= t("home.welcome") %>
+    </p>
+  <% else %>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-4"><%= Settings.app.name %></h1>
+    <p class="text-gray-600 mb-6"><%= t("home.sign_in_prompt") %></p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <%= link_to t("sessions.sign_in"), sign_in_path, class: "btn-primary" %>
+      <%= link_to t("views.invitations.use_invitation_code"), invitation_consume_path, class: "btn-default" %>
+    </div>
+  <% end %>
+</div>

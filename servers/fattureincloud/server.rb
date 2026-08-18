@@ -6,7 +6,7 @@ require_relative "fattureincloud_client"
 module Madcp
   module Servers
     module FattureInCloud
-      class Server < Integration
+      class Server < ::McpServer
         server_id "fattureincloud"
         display_name "Fatture in Cloud"
         description "Companies, archive documents, invoices, self-invoices, clients, and suppliers through the Fatture in Cloud v2 API."
@@ -39,10 +39,12 @@ module Madcp
           per_page: { type: "integer", description: "Items per page" },
           q: { type: "string", description: "API search/filter query" },
         }.freeze
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          @client = build_client
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions

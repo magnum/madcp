@@ -1,0 +1,9 @@
+admin:
+  name: admin
+  resource_type:
+  resource_id:
+
+user:
+  name: user
+  resource_type:
+  resource_id:

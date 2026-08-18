@@ -6,7 +6,7 @@ require_relative "googleworkspace_client"
 module Madcp
   module Servers
     module GoogleWorkspace
-      class Server < Integration
+      class Server < ::McpServer
         server_id "googleworkspace"
         display_name "Google Workspace"
         description "Google Docs, Sheets, Drive, and every Workspace API exposed dynamically by the gws CLI."
@@ -18,11 +18,12 @@ module Madcp
           "quotedFileContent,replies(id,content,htmlContent,author,createdTime,modifiedTime,action)"
         DEFAULT_REPLY_FIELDS =
           "id,content,htmlContent,author,createdTime,modifiedTime,action"
+        after_initialize :ensure_runtime_client
+        after_find :ensure_runtime_client
 
-        def initialize(config:)
-          super
-          prefer_credentials_file_over_token!
-          @client = Client.new
+        def ensure_runtime_client
+          return if defined?(@client) && @client
+          replace_client! if respond_to?(:replace_client!, true)
         end
 
         def instructions
@@ -200,6 +201,10 @@ module Madcp
           define_docs_tools
           define_sheets_tools
           define_generic_api_tools
+        end
+
+        def replace_client!
+          @client = Client.new
         end
 
         protected

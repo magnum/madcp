@@ -1,0 +1,76 @@
+<% content_for :title, "MadCP integrations" %>
+
+<div class="w-full max-w-4xl mx-auto">
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Integrations</h1>
+    <p class="mt-3 text-base leading-7 text-stone-700 dark:text-zinc-300">
+      Each integration has an independent MCP endpoint, OAuth issuer, credentials, and write-method policy.
+    </p>
+  </header>
+
+  <div class="divide-y divide-stone-300 border-t border-b border-stone-300 dark:divide-zinc-700 dark:border-zinc-700">
+    <% @servers.each do |server| %>
+      <% status = server.auth_status %>
+      <article class="py-9" data-controller="auth-badge" data-auth-badge-url-value="<%= auth_status_mcp_server_path(server.code) %>">
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="min-w-0 text-2xl font-bold tracking-tight"><%= server.name %></h2>
+          <div class="flex shrink-0 flex-col items-end gap-2">
+            <div class="flex flex-nowrap items-center justify-end gap-2">
+              <span data-auth-badge-target="ok"
+                    class="<%= status[:authenticated] ? "inline-flex" : "hidden" %> h-10 w-10 items-center justify-center rounded-lg border border-emerald-700 bg-emerald-50 text-emerald-900 md:w-auto md:px-4 dark:bg-emerald-950 dark:text-emerald-100">
+                <span class="hidden md:inline">Authenticated</span>
+                <span class="md:hidden">✓</span>
+              </span>
+              <span data-auth-badge-target="bad"
+                    class="<%= status[:authenticated] ? "hidden" : "inline-flex" %> h-10 w-10 items-center justify-center rounded-lg border border-amber-700 bg-amber-50 text-amber-950 md:w-auto md:px-4 dark:bg-amber-950 dark:text-amber-100">
+                <span class="hidden md:inline">Not authenticated</span>
+                <span class="md:hidden">✕</span>
+              </span>
+              <button type="button" data-action="auth-badge#refresh"
+                      class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-stone-400 dark:border-zinc-600"
+                      title="Refresh auth status" aria-label="Refresh auth status">
+                <%= heroicon "arrow-path", options: { class: "h-5 w-5" } %>
+              </button>
+              <%= link_to "Auth", auth_mcp_server_path(server.code),
+                    class: "inline-flex h-10 cursor-pointer items-center rounded-lg bg-stone-950 px-4 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
+              <%= link_to "json", tools_mcp_server_path(server.code),
+                    class: "inline-flex h-10 cursor-pointer items-center rounded-lg border-2 border-stone-950 px-4 font-bold dark:border-zinc-100" %>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 space-y-4">
+          <p class="text-base leading-7 text-stone-700 dark:text-zinc-300"><%= server.description %></p>
+          <dl class="flex flex-col gap-4 sm:flex-row sm:gap-10">
+            <div>
+              <dt class="font-semibold text-stone-500 dark:text-zinc-400">Server ID</dt>
+              <dd class="mt-1 font-mono"><%= server.code %></dd>
+            </div>
+            <div>
+              <dt class="font-semibold text-stone-500 dark:text-zinc-400">Write methods</dt>
+              <dd class="mt-1"><%= server.allow_write? ? "Enabled" : "Disabled" %></dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="mt-7" data-controller="clipboard">
+          <p class="font-semibold text-stone-500 dark:text-zinc-400">MCP endpoint</p>
+          <div class="mt-2 flex items-stretch gap-2">
+            <input type="text"
+                   readonly
+                   value="<%= server.mcp_url %>"
+                   data-clipboard-target="source"
+                   data-action="click->clipboard#selectAll focus->clipboard#selectAll"
+                   class="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2 font-mono text-sm text-stone-900 outline-none focus:border-stone-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100">
+            <button type="button"
+                    data-clipboard-target="button"
+                    data-action="clipboard#copy"
+                    class="shrink-0 cursor-pointer rounded-lg border border-stone-400 px-3 py-2 text-sm font-bold dark:border-zinc-600">
+              Copy
+            </button>
+          </div>
+        </div>
+      </article>
+    <% end %>
+  </div>
+</div>

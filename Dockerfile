@@ -1,83 +1,77 @@
-FROM golang:1.26-bookworm AS basecamp-build
+# syntax=docker/dockerfile:1
+# check=error=true
 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /src
-RUN git clone --depth 1 https://github.com/basecamp/basecamp-cli .
-RUN CGO_ENABLED=0 go build -trimpath -o /out/basecamp ./cmd/basecamp \
-    || CGO_ENABLED=0 go build -trimpath -o /out/basecamp .
+# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
+# docker build -t madcp .
+# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name madcp madcp
 
-FROM golang:1.26-bookworm AS hey-build
+# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /src
-RUN git clone --depth 1 https://github.com/basecamp/hey-cli .
-RUN CGO_ENABLED=0 go build -trimpath -o /out/hey ./cmd/hey \
-    || CGO_ENABLED=0 go build -trimpath -o /out/hey .
+# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
+ARG RUBY_VERSION=4.0.2
+FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
-FROM debian:bookworm-slim AS gws-download
+# Rails app lives here
+WORKDIR /rails
 
-ARG TARGETARCH
-ARG GWS_VERSION=0.22.5
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /tmp
-RUN case "${TARGETARCH}" in \
-      amd64) target="x86_64-unknown-linux-musl" ;; \
-      arm64) target="aarch64-unknown-linux-musl" ;; \
-      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
-    esac \
-    && archive="google-workspace-cli-${target}.tar.gz" \
-    && url="https://github.com/googleworkspace/cli/releases/download/v${GWS_VERSION}" \
-    && curl -fsSLO "${url}/${archive}" \
-    && curl -fsSLO "${url}/${archive}.sha256" \
-    && sha256sum -c "${archive}.sha256" \
-    && tar -xzf "${archive}" \
-    && mkdir -p /out \
-    && install -m 0755 gws /out/gws
+# Install base packages
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
+    ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-FROM ruby:4.0.6-slim-bookworm
+# Set production environment variables and enable jemalloc for reduced memory usage and latency.
+ENV RAILS_ENV="production" \
+    BUNDLE_DEPLOYMENT="1" \
+    BUNDLE_PATH="/usr/local/bundle" \
+    BUNDLE_WITHOUT="development" \
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
-RUN useradd --create-home --uid 10001 madcp \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends gosu curl build-essential libpq-dev libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+# Throw-away build stage to reduce size of final image
+FROM base AS build
 
-COPY --from=basecamp-build /out/basecamp /usr/local/bin/basecamp
-COPY --from=hey-build /out/hey /usr/local/bin/hey
-COPY --from=gws-download /out/gws /usr/local/bin/gws
+# Install packages needed to build gems
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-WORKDIR /app
+# Install application gems
+COPY vendor/* ./vendor/
 COPY Gemfile Gemfile.lock ./
-RUN gem install bundler --no-document \
-    && bundle config set --local deployment false \
-    && bundle config set --local without development \
-    && bundle install --jobs 4 \
-    && apt-get purge -y --auto-remove build-essential libpq-dev \
-    && apt-get install -y --no-install-recommends libpq5 \
-    && rm -rf /var/lib/apt/lists/*
 
-COPY lib ./lib
-COPY servers ./servers
-COPY views ./views
-COPY scripts ./scripts
-COPY server.rb config.ru entrypoint.sh ./
-RUN chmod +x /app/entrypoint.sh /app/scripts/run-with-reload.sh
+RUN bundle install && \
+    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
+    # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
+    bundle exec bootsnap precompile -j 1 --gemfile
 
-ENV HOME=/home/madcp \
-    HEY_NO_KEYRING=1 \
-    BASECAMP_NO_KEYRING=1 \
-    GOOGLE_WORKSPACE_CLI_CONFIG_DIR=/home/madcp/.config/gws \
-    GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file \
-    MADCP_HOST=0.0.0.0 \
-    MADCP_PORT=8765
+# Copy application code
+COPY . .
 
-EXPOSE 8765
+# Precompile bootsnap code for faster boot times.
+# -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
+RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["bundle", "exec", "ruby", "server.rb"]
+# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD curl -fsS http://127.0.0.1:8765/healthz > /dev/null || exit 1
+
+
+
+# Final stage for app image
+FROM base
+
+# Run and own only the runtime files as a non-root user for security
+RUN groupadd --system --gid 1000 rails && \
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
+USER 1000:1000
+
+# Copy built artifacts: gems, application
+COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
+COPY --chown=rails:rails --from=build /rails /rails
+
+# Entrypoint prepares the database.
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+
+# Start server via Thruster by default, this can be overwritten at runtime
+EXPOSE 80
+CMD ["./bin/thrust", "./bin/rails", "server"]
