@@ -13,6 +13,8 @@ module Madcp
         version "0.1.0"
         oauth_token_retrieval true
 
+        def self.default_service_token_refresh_in_minutes = 1_320
+
         # :a = full write on that resource (create/modify/delete). :r = read-only.
         # MadCP write tools still require FATTUREINCLOUD_ALLOW_WRITE=true.
         # Override with FATTUREINCLOUD_OAUTH_SCOPES if needed; re-authorize after changes.
@@ -193,6 +195,12 @@ module Madcp
 
         def replace_client!
           @client = build_client
+        end
+
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_access_token!
         end
 
         private

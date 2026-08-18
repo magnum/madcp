@@ -134,6 +134,7 @@ module McpServer::Credentials
     replace_client!
     raise rejection_message unless auth_status(force: true)[:authenticated]
 
+    schedule_service_token_refresh_job!
     true
   end
 
@@ -149,7 +150,10 @@ module McpServer::Credentials
     persist_credentials!(updates)
     replace_client!
     status = auth_status(force: true)
-    return true if status[:authenticated]
+    if status[:authenticated]
+      schedule_service_token_refresh_job!
+      return true
+    end
 
     persist_credentials!(old)
     replace_client!

@@ -55,6 +55,7 @@ it:
     attributes:
       mcp_server:
         token_refresh_in_minutes: "Intervallo rinnovo token (minuti)"
+        service_token_refresh_in_minutes: "Intervallo rinnovo token servizio (minuti)"
       user:
         id: "ID"
         firstname: "Nome"

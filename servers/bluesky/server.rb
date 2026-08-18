@@ -10,6 +10,9 @@ module Madcp
         display_name "Bluesky"
         description "Profiles, feeds, posts, search, follows, likes, and notifications through the Bluesky AT Protocol API."
         version "0.1.0"
+
+        def self.default_service_token_refresh_in_minutes = 90
+
         after_initialize :ensure_runtime_client
         after_find :ensure_runtime_client
 
@@ -153,6 +156,15 @@ module Madcp
 
         def replace_client!
           @client = build_client
+        end
+
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_session!
+          true
+        rescue StandardError
+          false
         end
 
         private

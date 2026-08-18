@@ -30,6 +30,26 @@ class McpServerTest < ActiveSupport::TestCase
     assert server.token_refresh_enabled?
   end
 
+  test "service_token_refresh_in_minutes blank disables provider refresh schedule" do
+    server = McpServer.fetch!("hey")
+    server.update!(service_token_refresh_in_minutes: "")
+    assert_nil server.reload.service_token_refresh_in_minutes
+    refute server.service_token_refresh_enabled?
+
+    server.update!(service_token_refresh_in_minutes: 90)
+    assert_equal 90, server.service_token_refresh_in_minutes
+    assert server.service_token_refresh_enabled?
+  end
+
+  test "provider defaults for service_token_refresh_in_minutes" do
+    assert_equal 1_440, Madcp::Servers::GoogleWorkspace::Server.default_service_token_refresh_in_minutes
+    assert_equal 1_320, Madcp::Servers::FattureInCloud::Server.default_service_token_refresh_in_minutes
+    assert_equal 90, Madcp::Servers::Twitter::Server.default_service_token_refresh_in_minutes
+    assert_equal 90, Madcp::Servers::Bluesky::Server.default_service_token_refresh_in_minutes
+    assert_nil Madcp::Servers::Hey::Server.default_service_token_refresh_in_minutes
+    assert_nil Madcp::Servers::Basecamp::Server.default_service_token_refresh_in_minutes
+  end
+
   test "teslamate tool catalog includes reports and run_sql" do
     server = McpServer.fetch!("teslamate")
     names = server.tool_catalog.map { |tool| tool[:name] }

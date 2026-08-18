@@ -75,6 +75,7 @@ en:
     attributes:
       mcp_server:
         token_refresh_in_minutes: "Token refresh (minutes)"
+        service_token_refresh_in_minutes: "Service token refresh (minutes)"
       user:
         id: "ID"
         firstname: "First name"

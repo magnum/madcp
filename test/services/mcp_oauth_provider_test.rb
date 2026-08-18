@@ -20,7 +20,7 @@ class McpOauthProviderTest < ActiveSupport::TestCase
   end
 
   test "does not enqueue refresh job when token_refresh_in_minutes is blank" do
-    assert_no_enqueued_jobs only: ServerAuthTokenRefreshJob do
+    assert_no_enqueued_jobs only: MadcpAuthTokenRefreshJob do
       complete_auth_code_flow
     end
   end
@@ -30,7 +30,7 @@ class McpOauthProviderTest < ActiveSupport::TestCase
 
     freeze_time do
       tokens = nil
-      assert_enqueued_with(job: ServerAuthTokenRefreshJob, at: 45.minutes.from_now) do
+      assert_enqueued_with(job: MadcpAuthTokenRefreshJob, at: 45.minutes.from_now) do
         tokens = complete_auth_code_flow
       end
       assert_equal McpOauthProvider.access_ttl_seconds(45), tokens[:expires_in]

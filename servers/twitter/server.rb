@@ -16,6 +16,8 @@ module Madcp
         version "0.1.0"
         oauth_token_retrieval true
 
+        def self.default_service_token_refresh_in_minutes = 90
+
         DEFAULT_SCOPES = [
           "tweet.read",
           "tweet.write",
@@ -214,6 +216,12 @@ module Madcp
 
         def replace_client!
           @client = build_client
+        end
+
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_access_token!
         end
 
         private

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_232012) do
   create_table "api_keys", force: :cascade do |t|
     t.bigint "bearer_id", null: false
     t.string "bearer_type", null: false
@@ -133,6 +133,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
     t.string "name", null: false
     t.text "oauth_token_payload"
     t.boolean "oauth_token_retrieval", default: false, null: false
+    t.integer "service_token_refresh_in_minutes"
     t.integer "token_refresh_in_minutes"
     t.string "type", null: false
     t.datetime "updated_at", null: false

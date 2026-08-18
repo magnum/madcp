@@ -8,6 +8,7 @@ class McpServer < ApplicationRecord
   include McpServer::Tools
   include McpServer::Credentials
   include McpServer::AuthStatus
+  include McpServer::ServiceTokenRefresh
 
   has_many :mcp_oauth_clients, dependent: :destroy
   has_many :mcp_oauth_access_tokens, dependent: :destroy
@@ -24,8 +25,12 @@ class McpServer < ApplicationRecord
   validates :token_refresh_in_minutes,
             numericality: { only_integer: true, greater_than: 0 },
             allow_nil: true
+  validates :service_token_refresh_in_minutes,
+            numericality: { only_integer: true, greater_than: 0 },
+            allow_nil: true
 
   before_validation :normalize_token_refresh_in_minutes
+  before_validation :normalize_service_token_refresh_in_minutes
 
   after_initialize :prepare_runtime
   after_find :prepare_runtime
@@ -144,6 +149,7 @@ class McpServer < ApplicationRecord
           McpServer.insert({
             code: code,
             type: klass.name,
+            service_token_refresh_in_minutes: klass.default_service_token_refresh_in_minutes,
             created_at: now,
             **attrs,
           })
@@ -212,6 +218,10 @@ class McpServer < ApplicationRecord
 
   def normalize_token_refresh_in_minutes
     self.token_refresh_in_minutes = nil unless token_refresh_in_minutes.to_i.positive?
+  end
+
+  def normalize_service_token_refresh_in_minutes
+    self.service_token_refresh_in_minutes = nil unless service_token_refresh_in_minutes.to_i.positive?
   end
 
   def prepare_runtime

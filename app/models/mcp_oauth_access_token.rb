@@ -16,7 +16,7 @@ class McpOauthAccessToken < ApplicationRecord
     minutes = mcp_server.token_refresh_in_minutes
     return unless minutes.to_i.positive?
 
-    ServerAuthTokenRefreshJob
+    MadcpAuthTokenRefreshJob
       .set(wait: minutes.minutes)
       .perform_later(self, expected_expires_at: expires_at.to_i)
   end

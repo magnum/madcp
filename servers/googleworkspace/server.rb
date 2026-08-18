@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
+require "net/http"
+require "uri"
 require_relative "googleworkspace_client"
 
 module Madcp
@@ -11,6 +14,8 @@ module Madcp
         display_name "Google Workspace"
         description "Google Docs, Sheets, Drive, and every Workspace API exposed dynamically by the gws CLI."
         version "0.1.0"
+
+        def self.default_service_token_refresh_in_minutes = 1_440
 
         SAFE_READ_METHODS = %w[get list search lookup query export download batchGet].freeze
         DEFAULT_COMMENT_FIELDS =
@@ -167,6 +172,7 @@ module Madcp
             raise authentication_failure_message(status)
           end
 
+          schedule_service_token_refresh_job!
           true
         rescue StandardError => e
           if old_credentials
@@ -205,6 +211,52 @@ module Madcp
 
         def replace_client!
           @client = Client.new
+        end
+
+        def refresh_service_token!
+          path = credentials_path
+          return false unless File.file?(path)
+
+          credentials = JSON.parse(File.read(path))
+          return false unless credentials["type"].to_s == "authorized_user"
+
+          refresh = Madcp.sanitize_env_value(credentials["refresh_token"])
+          client_id = Madcp.sanitize_env_value(credentials["client_id"])
+          client_secret = Madcp.sanitize_env_value(credentials["client_secret"])
+          return false if refresh.empty? || client_id.empty? || client_secret.empty?
+
+          uri = URI("https://oauth2.googleapis.com/token")
+          response = Net::HTTP.post_form(
+            uri,
+            {
+              "grant_type" => "refresh_token",
+              "refresh_token" => refresh,
+              "client_id" => client_id,
+              "client_secret" => client_secret,
+            },
+          )
+          return false unless response.is_a?(Net::HTTPSuccess)
+
+          body = JSON.parse(response.body)
+          access = Madcp.sanitize_env_value(body["access_token"])
+          return false if access.empty?
+
+          credentials["access_token"] = access
+          credentials["token"] = access
+          credentials["expiry"] = (Time.now.to_i + body.fetch("expires_in", 3600).to_i).to_s
+          new_refresh = Madcp.sanitize_env_value(body["refresh_token"])
+          credentials["refresh_token"] = new_refresh unless new_refresh.empty?
+
+          File.write(path, JSON.pretty_generate(credentials) + "\n", perm: 0o600)
+          sync_gws_plain_credentials!(credentials)
+          persist_credentials!(
+            "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE" => path,
+            "GOOGLE_WORKSPACE_CLI_TOKEN" => nil,
+          )
+          replace_client!
+          true
+        rescue StandardError
+          false
         end
 
         protected
