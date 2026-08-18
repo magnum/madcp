@@ -57,8 +57,12 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips libsqlite3-0 ca-certificates && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips libsqlite3-0 ca-certificates \
+      python3 python3-pip python3-venv && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
+    python3 -m venv /opt/hass-cli && \
+    /opt/hass-cli/bin/pip install --no-cache-dir homeassistant-cli && \
+    ln -sf /opt/hass-cli/bin/hass-cli /usr/local/bin/hass-cli && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment variables and enable jemalloc for reduced memory usage and latency.
