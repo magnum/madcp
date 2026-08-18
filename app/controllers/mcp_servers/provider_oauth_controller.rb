@@ -28,6 +28,13 @@ module McpServers
     end
 
     def callback
+      @server = mcp_server
+
+      if params[:error].present?
+        @error = provider_oauth_error_message
+        return render :callback_error, status: :unprocessable_entity
+      end
+
       state = params[:state].to_s
       row = mcp_server.mcp_provider_oauth_states.find_by(state: state)
       unless row&.active?
@@ -70,6 +77,22 @@ module McpServers
       redirect_to auth_mcp_server_path(mcp_server.code),
                   alert: "OAuth token retrieval is not available for this integration"
       false
+    end
+
+    def provider_oauth_error_message
+      code = params[:error].to_s
+      description = params[:error_description].to_s
+      detail = description.present? ? "#{code}: #{description}" : code
+
+      case code
+      when "invalid_scope"
+        "X rejected the OAuth scopes (#{detail}). In the Developer Portal set App permissions to " \
+          "match the scopes MadCP requests (Read for the default set; Read and write if you enabled " \
+          "TWITTER_ALLOW_WRITE or custom TWITTER_OAUTH_SCOPES). You can also set a minimal " \
+          "TWITTER_OAUTH_SCOPES=tweet.read users.read offline.access to test."
+      else
+        "Provider OAuth error: #{detail.presence || "unknown"}"
+      end
     end
   end
 end

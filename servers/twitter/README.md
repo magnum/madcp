@@ -64,8 +64,8 @@ TWITTER_OAUTH_SCOPES=tweet.read users.read offline.access
 | `TWITTER_CLIENT_SECRET` | OAuth 2.0 client secret |
 | `TWITTER_TOKEN` | User access token (managed / paste) |
 | `TWITTER_REFRESH_TOKEN` | Refresh token (managed) |
-| `TWITTER_OAUTH_SCOPES` | Space-separated scopes (defaults cover tweet/user/follow/like/bookmark + `offline.access`) |
-| `TWITTER_ALLOW_WRITE` | Enable write tools |
+| `TWITTER_OAUTH_SCOPES` | Space-separated scopes. Default: read scopes + `offline.access`; write scopes added when `TWITTER_ALLOW_WRITE=true` |
+| `TWITTER_ALLOW_WRITE` | Enable write tools **and** request write OAuth scopes (portal must be Read and write) |
 | `TWITTER_TIMEOUT` | HTTP timeout seconds (default `30`) |
 
 ## Notes

@@ -63,6 +63,16 @@
       <p class="mt-2 text-sm text-stone-600">Register this exact URL in the provider developer portal.</p>
     </div>
 
+    <% if @server.respond_to?(:oauth_scopes) %>
+      <div class="rounded-lg border border-stone-300 bg-stone-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <p class="mb-2 font-semibold">OAuth scopes requested</p>
+        <code class="block break-all text-sm"><%= @server.oauth_scopes %></code>
+        <p class="mt-2 text-sm text-stone-600">
+          Portal App permissions must cover these scopes. An <code>invalid_scope</code> error usually means a mismatch.
+        </p>
+      </div>
+    <% end %>
+
     <%= submit_tag "Retrieve OAuth token",
           class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50 dark:bg-zinc-100 dark:text-zinc-950" %>
   <% end %>

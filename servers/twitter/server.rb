@@ -18,19 +18,25 @@ module Madcp
 
         def self.default_service_token_refresh_in_minutes = 90
 
-        DEFAULT_SCOPES = [
+        DEFAULT_READ_SCOPES = [
           "tweet.read",
-          "tweet.write",
           "users.read",
           "follows.read",
-          "follows.write",
           "like.read",
-          "like.write",
           "list.read",
           "bookmark.read",
-          "bookmark.write",
           "offline.access",
-        ].join(" ").freeze
+        ].freeze
+
+        DEFAULT_WRITE_SCOPES = [
+          "tweet.write",
+          "follows.write",
+          "like.write",
+          "bookmark.write",
+        ].freeze
+
+        # Broad default used only when TWITTER_ALLOW_WRITE=true and TWITTER_OAUTH_SCOPES is unset.
+        DEFAULT_SCOPES = (DEFAULT_READ_SCOPES + DEFAULT_WRITE_SCOPES).join(" ").freeze
 
         DEFAULT_TWEET_FIELDS = "created_at,public_metrics,lang,conversation_id,in_reply_to_user_id,referenced_tweets"
         DEFAULT_USER_FIELDS = "created_at,description,public_metrics,verified,profile_image_url"
@@ -57,7 +63,8 @@ module Madcp
             steps: [
               "In the X Developer Portal, open your app → User authentication settings.",
               "Enable OAuth 2.0, App type = Web App / Automated App or Bot (confidential client).",
-              "App permissions must cover your scopes (Read and write for MadCP defaults).",
+              "App permissions: Read for MadCP’s default scopes; Read and write only if you need writes " \
+                "(TWITTER_ALLOW_WRITE=true) or custom write scopes.",
               "Callback URI / Redirect URL must be EXACTLY the URL shown below (copy-paste).",
               "Also set Website URL (e.g. your MadCP public URL) — X often rejects auth without it.",
               "Paste the OAuth 2.0 Client ID and Client Secret below (not the old API Key / Consumer Key).",
@@ -65,10 +72,9 @@ module Madcp
               "Optionally paste a token manually and Save credentials, or confirm the token after the OAuth callback.",
             ],
             commands: [],
-            note: "If X shows “Something went wrong / weren’t able to give access”, it is almost " \
-                  "always a portal mismatch (callback URI, app type, permissions, or wrong Client ID), " \
-                  "not a MadCP bug. MadCP stores tokens under data/twitter/oauth_token.json. " \
-                  "API access depends on your developer tier.",
+            note: "error=invalid_scope means portal App permissions do not cover the scopes MadCP requests " \
+                  "(see below). “Something went wrong” on X is usually the same mismatch, or a wrong callback URI. " \
+                  "MadCP stores tokens under data/twitter/oauth_token.json.",
           }
         end
 
@@ -177,7 +183,7 @@ module Madcp
             response_type: "code",
             client_id: client_id,
             redirect_uri: callback_url,
-            scope: ENV.fetch("TWITTER_OAUTH_SCOPES", DEFAULT_SCOPES),
+            scope: oauth_scopes,
             state: state,
             code_challenge: code_challenge,
             code_challenge_method: "S256",
@@ -205,6 +211,15 @@ module Madcp
           define_tweet_read_tools
           define_timeline_tools
           define_write_tools
+        end
+
+        def oauth_scopes
+          custom = Madcp.sanitize_env_value(ENV["TWITTER_OAUTH_SCOPES"])
+          return custom if custom.present?
+
+          scopes = DEFAULT_READ_SCOPES.dup
+          scopes.concat(DEFAULT_WRITE_SCOPES) if allow_write_methods?
+          scopes.join(" ")
         end
 
         protected
