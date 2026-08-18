@@ -28,15 +28,10 @@ https://madcp.m6i.it/servers/twitter/oauth_callback
    (or `${MADCP_PUBLIC_URL}/servers/twitter/oauth_callback` for your host — no trailing slash)
 
    - Website URL: e.g. `https://madcp.m6i.it` (required by X for user auth)
-3. Copy the **OAuth 2.0 Client ID** and **Client Secret** into:
-
-```dotenv
-TWITTER_CLIENT_ID=...
-TWITTER_CLIENT_SECRET=...
-```
+3. Copy the **OAuth 2.0 Client ID** and **Client Secret** into `/servers/twitter/auth`, then **Save credentials**.
 
    Do **not** use the legacy API Key / API Secret (OAuth 1.0a) here.
-4. Open `/servers/twitter/auth` → **Retrieve OAuth token**.
+4. Click **Retrieve OAuth token**.
 
 MadCP uses authorization code + PKCE. The token response (including `refresh_token`) is stored under:
 

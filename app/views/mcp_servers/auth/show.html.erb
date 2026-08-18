@@ -54,6 +54,13 @@
 <% end %>
 
 <% if @server.oauth_token_retrieval? %>
+  <% callback_url = "#{Madcp.public_url}/servers/#{@server.code}/oauth_callback" %>
+  <div class="mt-8 rounded-lg border border-stone-300 bg-stone-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+    <p class="mb-2 font-semibold">Callback URI / Redirect URL</p>
+    <code class="block break-all text-sm"><%= callback_url %></code>
+    <p class="mt-2 text-sm text-stone-600">Register this exact URL in the provider developer portal.</p>
+  </div>
+
   <div class="mt-8">
     <%= button_to "Retrieve OAuth token", provider_oauth_mcp_server_path(@server.code),
           method: :post, class: "cursor-pointer rounded-lg bg-stone-950 px-4 py-2 font-bold text-stone-50" %>
