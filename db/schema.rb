@@ -11,9 +11,6 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
-
   create_table "api_keys", force: :cascade do |t|
     t.bigint "bearer_id", null: false
     t.string "bearer_type", null: false
@@ -77,10 +74,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
     t.string "client_secret"
     t.integer "client_secret_expires_at", default: 0, null: false
     t.datetime "created_at", null: false
-    t.jsonb "grant_types", default: [], null: false
+    t.json "grant_types", default: [], null: false
     t.bigint "mcp_server_id", null: false
-    t.jsonb "redirect_uris", default: [], null: false
-    t.jsonb "response_types", default: [], null: false
+    t.json "redirect_uris", default: [], null: false
+    t.json "response_types", default: [], null: false
     t.string "scope"
     t.string "token_endpoint_auth_method", default: "client_secret_post", null: false
     t.datetime "updated_at", null: false
@@ -120,7 +117,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
     t.bigint "mcp_server_id", null: false
-    t.jsonb "payload", default: {}, null: false
+    t.json "payload", default: {}, null: false
     t.string "state", null: false
     t.datetime "updated_at", null: false
     t.index ["mcp_server_id"], name: "index_mcp_provider_oauth_states_on_mcp_server_id"
@@ -189,7 +186,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_192957) do
     t.string "uid"
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true, where: "((provider IS NOT NULL) AND (uid IS NOT NULL))"
+    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true, where: "provider IS NOT NULL AND uid IS NOT NULL"
   end
 
   create_table "users_roles", id: false, force: :cascade do |t|

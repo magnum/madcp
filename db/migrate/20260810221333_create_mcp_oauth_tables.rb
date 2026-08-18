@@ -7,10 +7,10 @@ class CreateMcpOauthTables < ActiveRecord::Migration[8.1]
       t.string :client_id, null: false
       t.string :client_secret
       t.string :client_name
-      t.jsonb :redirect_uris, null: false, default: []
+      t.json :redirect_uris, null: false, default: []
       t.string :token_endpoint_auth_method, null: false, default: "client_secret_post"
-      t.jsonb :grant_types, null: false, default: []
-      t.jsonb :response_types, null: false, default: []
+      t.json :grant_types, null: false, default: []
+      t.json :response_types, null: false, default: []
       t.string :scope
       t.integer :client_id_issued_at, null: false
       t.integer :client_secret_expires_at, null: false, default: 0
@@ -71,7 +71,7 @@ class CreateMcpOauthTables < ActiveRecord::Migration[8.1]
     create_table :mcp_provider_oauth_states do |t|
       t.references :mcp_server, null: false, foreign_key: true
       t.string :state, null: false
-      t.jsonb :payload, null: false, default: {}
+      t.json :payload, null: false, default: {}
       t.datetime :expires_at, null: false
 
       t.timestamps

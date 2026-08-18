@@ -61,6 +61,6 @@ Rails.application.config.to_prepare do
   next unless ActiveRecord::Base.connection.data_source_exists?("mcp_servers")
 
   McpServer.discover!
-rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished
-  # db:create / first boot
+rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::StatementInvalid
+  # db:create / first boot / sqlite not ready yet
 end
