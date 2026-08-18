@@ -7,6 +7,10 @@
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
+# Global build args must be declared before the first FROM (used by later FROM lines).
+ARG RUBY_VERSION=4.0.5
+ARG GWS_VERSION=0.22.5
+
 # --- MCP CLI binaries (hey, basecamp, gws) ---
 FROM golang:1.26-bookworm AS basecamp-build
 RUN apt-get update && apt-get install -y --no-install-recommends git \
@@ -26,7 +30,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/hey ./cmd/hey \
 
 FROM debian:bookworm-slim AS gws-download
 ARG TARGETARCH
-ARG GWS_VERSION=0.22.5
+ARG GWS_VERSION
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
@@ -46,8 +50,7 @@ RUN case "${TARGETARCH}" in \
     && install -m 0755 gws /out/gws
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=4.0.5
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+FROM docker.io/library/ruby:${RUBY_VERSION}-slim AS base
 
 # Rails app lives here
 WORKDIR /rails
