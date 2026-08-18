@@ -47,7 +47,7 @@ class McpServerTest < ActiveSupport::TestCase
     assert_equal 90, Madcp::Servers::Twitter::Server.default_service_token_refresh_in_minutes
     assert_equal 90, Madcp::Servers::Bluesky::Server.default_service_token_refresh_in_minutes
     assert_nil Madcp::Servers::Hey::Server.default_service_token_refresh_in_minutes
-    assert_nil Madcp::Servers::Basecamp::Server.default_service_token_refresh_in_minutes
+    assert_equal 10_080, Madcp::Servers::Basecamp::Server.default_service_token_refresh_in_minutes
   end
 
   test "teslamate tool catalog includes reports and run_sql" do

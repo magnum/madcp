@@ -11,6 +11,8 @@ module Madcp
         description "Projects, todos, cards, messages, chat, files, and schedules via the official Basecamp CLI."
         version "0.1.0"
 
+        def self.default_service_token_refresh_in_minutes = 10_080 # weekly — CLI access tokens last ~2 weeks
+
         LIMIT_PROPERTIES = {
           limit: { type: "integer", description: "Maximum number of items" },
           fetch_all: { type: "boolean", description: "Fetch all pages instead of applying limit" },
@@ -32,22 +34,26 @@ module Madcp
         def auth_help_content
           {
             title: "Get Basecamp credentials",
-            description: "MadCP uses the official Basecamp CLI token — not a separate OAuth app from a " \
-                         "developer portal. If auth fails, refresh the CLI login and paste a new token.",
+            description: "Prefer importing the Basecamp CLI credentials file so MadCP can refresh tokens " \
+                         "in the background. A pasted access token alone expires in ~2 weeks with no refresh.",
             steps: [
-              "On a trusted computer with a browser: run `basecamp auth login` (re-login if the token is old).",
-              "Copy the token with `basecamp auth token --quiet` (no extra quotes or whitespace).",
-              "Set the numeric Account ID from your Basecamp URL " \
-                "(https://3.basecamp.com/<account_id>/…) or `basecamp accounts list`.",
-              "Paste Account ID first, then the token, and Save credentials.",
+              "On a trusted computer: `BASECAMP_NO_KEYRING=1 basecamp auth login` " \
+                "(forces a credentials.json even on macOS Keychain machines).",
+              "Paste the contents of `~/.config/basecamp/credentials.json` into the credentials JSON field below " \
+                "(or scp that file onto the server path shown in the help note).",
+              "Set the numeric Account ID from https://3.basecamp.com/<account_id>/… " \
+                "or `basecamp accounts list`.",
+              "Optional fallback: paste only `basecamp auth token --quiet` (no auto-refresh).",
+              "Save credentials — MadCP schedules a weekly CLI refresh when the credentials file is present.",
             ],
             commands: [
-              { label: "Sign in", value: "basecamp auth login" },
-              { label: "Copy the token", value: "basecamp auth token --quiet" },
+              { label: "Login (file-backed)", value: "BASECAMP_NO_KEYRING=1 basecamp auth login" },
+              { label: "Show credentials file", value: "cat ~/.config/basecamp/credentials.json" },
+              { label: "Copy access token only", value: "basecamp auth token --quiet" },
               { label: "Find the account ID", value: "basecamp accounts list" },
             ],
-            note: "You do not renew anything in a Basecamp developer portal for this integration. " \
-                  "Treat the token as a password and paste it only over HTTPS.",
+            note: "Server CLI home: #{cli_config_dir}. " \
+                  "No Basecamp developer-portal renewal is required. Treat credentials.json as a secret.",
           }
         end
 
@@ -62,11 +68,20 @@ module Madcp
               env: "BASECAMP_ACCOUNT_ID",
             },
             {
+              name: "basecamp_credentials_json",
+              label: "CLI credentials.json (recommended)",
+              type: "textarea",
+              required: false,
+              help: "Paste the full file from ~/.config/basecamp/credentials.json after " \
+                    "BASECAMP_NO_KEYRING=1 basecamp auth login. Enables background refresh. " \
+                    "Leave blank to keep the file already on the server.",
+            },
+            {
               name: "basecamp_token",
-              label: "Basecamp token",
+              label: "Basecamp access token (fallback)",
               type: "password",
-              required: true,
-              help: "Paste the output of: basecamp auth token --quiet. Leave blank to keep a saved token.",
+              required: false,
+              help: "Only if you are not importing credentials.json. Leave blank to keep a saved token.",
               env: "BASECAMP_TOKEN",
             },
           ]
@@ -82,38 +97,62 @@ module Madcp
             authenticated: authenticated,
             source: data["source"],
             account_id: ENV["BASECAMP_ACCOUNT_ID"],
+            credentials_file: cli_credentials_present?,
           }
         rescue StandardError => e
-          { authenticated: false, account_id: ENV["BASECAMP_ACCOUNT_ID"], error: e.message }
+          {
+            authenticated: false,
+            account_id: ENV["BASECAMP_ACCOUNT_ID"],
+            credentials_file: cli_credentials_present?,
+            error: e.message,
+          }
         end
 
         def apply_credentials(params)
           load_credentials!
-          token = Madcp.sanitize_env_value(params["basecamp_token"])
           account_id = Madcp.sanitize_env_value(params["basecamp_account_id"])
-
-          updates = {}
-          updates["BASECAMP_TOKEN"] = token if token.present?
-          updates["BASECAMP_ACCOUNT_ID"] = account_id if account_id.present?
-
-          effective_token = updates["BASECAMP_TOKEN"].presence ||
-            Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
-          effective_account = updates["BASECAMP_ACCOUNT_ID"].presence ||
-            Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"])
-
-          raise "Basecamp token is required" if effective_token.empty?
-          raise "Basecamp account ID is required" if effective_account.empty?
+          token = Madcp.sanitize_env_value(params["basecamp_token"])
+          credentials_json = params["basecamp_credentials_json"].to_s.strip
 
           old_token = ENV["BASECAMP_TOKEN"]
           old_account = ENV["BASECAMP_ACCOUNT_ID"]
-          persist_credentials!(
-            "BASECAMP_TOKEN" => effective_token,
-            "BASECAMP_ACCOUNT_ID" => effective_account,
-          )
+          old_credentials = File.file?(cli_credentials_path) ? File.read(cli_credentials_path) : nil
+
+          write_cli_credentials_json!(credentials_json) if credentials_json.present?
+
+          updates = {}
+          updates["BASECAMP_ACCOUNT_ID"] = account_id if account_id.present?
+          updates["BASECAMP_TOKEN"] = token if token.present?
+
+          effective_account = updates["BASECAMP_ACCOUNT_ID"].presence ||
+            Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"])
+          effective_token = updates["BASECAMP_TOKEN"].presence ||
+            Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
+
+          raise "Basecamp account ID is required" if effective_account.empty?
+          unless cli_credentials_present? || effective_token.present?
+            raise "Import credentials.json (recommended) or paste a Basecamp access token"
+          end
+
+          write_cli_config!(account_id: effective_account)
+          persist_payload = { "BASECAMP_ACCOUNT_ID" => effective_account }
+          if cli_credentials_present? && token.blank?
+            # Prefer CLI file refresh; do not pin a pasted/stale access token in ENV.
+            persist_payload["BASECAMP_TOKEN"] = nil
+          elsif effective_token.present?
+            persist_payload["BASECAMP_TOKEN"] = effective_token
+          end
+          persist_credentials!(persist_payload)
+
           replace_client!
           status = auth_status(force: true)
-          return true if status[:authenticated]
+          if status[:authenticated]
+            sync_access_token_from_cli! if cli_credentials_present?
+            schedule_service_token_refresh_job!
+            return true
+          end
 
+          restore_cli_credentials!(old_credentials)
           persist_credentials!(
             "BASECAMP_TOKEN" => old_token,
             "BASECAMP_ACCOUNT_ID" => old_account,
@@ -121,18 +160,34 @@ module Madcp
           replace_client!
           detail = status[:error].presence || "authenticated=false"
           raise "Basecamp token rejected or account ID is invalid (#{detail}). " \
-                "Re-run `basecamp auth login`, then paste a fresh `basecamp auth token --quiet`. " \
-                "Account ID is the number in https://3.basecamp.com/<id>/… — not a developer-portal app secret."
+                "Prefer importing credentials.json from `BASECAMP_NO_KEYRING=1 basecamp auth login`, " \
+                "or paste a fresh access token. Account ID is the number in https://3.basecamp.com/<id>/…"
         ensure
           token = nil
+          credentials_json = nil
         end
 
         def clear_credentials!
+          FileUtils.rm_f(cli_credentials_path)
           persist_credentials!("BASECAMP_TOKEN" => nil, "BASECAMP_ACCOUNT_ID" => nil)
-          @client = Client.new
+          replace_client!
           @client.run(@client.auth_logout, truncate: false)
         rescue CliError
           nil
+        end
+
+        # Uses the Basecamp CLI’s own OAuth refresh against credentials.json, then syncs the access token.
+        def refresh_service_token!
+          return false unless cli_credentials_present?
+
+          load_credentials!
+          replace_client!
+          @client.run(@client.me, truncate: false)
+          sync_access_token_from_cli!
+          true
+        rescue StandardError => e
+          Rails.logger.warn("[basecamp] service token refresh failed: #{e.message}")
+          false
         end
 
         def configure_tools
@@ -144,7 +199,25 @@ module Madcp
         end
 
         def replace_client!
-          @client = Client.new
+          @client = Client.new(env: cli_process_env)
+        end
+
+        def cli_home
+          path = File.join(data_dir, "home")
+          FileUtils.mkdir_p(File.join(path, ".config", "basecamp"), mode: 0o700)
+          path
+        end
+
+        def cli_config_dir
+          File.join(cli_home, ".config", "basecamp")
+        end
+
+        def cli_credentials_path
+          File.join(cli_config_dir, "credentials.json")
+        end
+
+        def cli_credentials_present?
+          File.file?(cli_credentials_path) && File.size(cli_credentials_path).positive?
         end
 
         protected
@@ -152,6 +225,64 @@ module Madcp
         def credential_env_keys = %w[BASECAMP_TOKEN BASECAMP_ACCOUNT_ID]
 
         private
+
+        def cli_process_env
+          env = {
+            "BASECAMP_NO_KEYRING" => "1",
+            "HOME" => cli_home,
+            "XDG_CONFIG_HOME" => File.join(cli_home, ".config"),
+            "BASECAMP_ACCOUNT_ID" => Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"]),
+          }
+
+          if cli_credentials_present?
+            # Let the CLI read/refresh credentials.json — do not pin a stale access token.
+            env["BASECAMP_TOKEN"] = nil
+          else
+            token = Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
+            env["BASECAMP_TOKEN"] = token if token.present?
+          end
+
+          env
+        end
+
+        def write_cli_credentials_json!(raw)
+          data = JSON.parse(raw)
+          raise "credentials.json must be a JSON object" unless data.is_a?(Hash)
+
+          FileUtils.mkdir_p(cli_config_dir, mode: 0o700)
+          File.write(cli_credentials_path, JSON.pretty_generate(data), perm: 0o600)
+        rescue JSON::ParserError => e
+          raise "Invalid credentials.json: #{e.message}"
+        end
+
+        def write_cli_config!(account_id:)
+          path = File.join(cli_config_dir, "config.json")
+          current = File.file?(path) ? JSON.parse(File.read(path)) : {}
+          current = {} unless current.is_a?(Hash)
+          current["account_id"] = account_id.to_s
+          FileUtils.mkdir_p(cli_config_dir, mode: 0o700)
+          File.write(path, JSON.pretty_generate(current), perm: 0o600)
+        rescue JSON::ParserError
+          File.write(path, JSON.pretty_generate({ "account_id" => account_id.to_s }), perm: 0o600)
+        end
+
+        def restore_cli_credentials!(old_credentials)
+          if old_credentials.nil?
+            FileUtils.rm_f(cli_credentials_path)
+          else
+            File.write(cli_credentials_path, old_credentials, perm: 0o600)
+          end
+        end
+
+        def sync_access_token_from_cli!
+          raw = @client.run(@client.auth_token, truncate: false).to_s.strip
+          token = Madcp.sanitize_env_value(raw)
+          return if token.empty?
+
+          persist_credentials!("BASECAMP_TOKEN" => token)
+        ensure
+          token = nil
+        end
 
         def define_skill
           path = File.join(__dir__, "skills", "basecamp", "SKILL.md")

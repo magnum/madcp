@@ -4,15 +4,12 @@ module Madcp
   module Servers
     module Basecamp
       class Client < CliClient
-        def initialize
+        def initialize(env: {})
           super(
             bin: ENV.fetch("BASECAMP_BIN", "basecamp"),
             timeout: ENV.fetch("BASECAMP_TIMEOUT", "30").to_i,
             max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
-            env: {
-              "BASECAMP_TOKEN" => ENV.fetch("BASECAMP_TOKEN", ""),
-              "BASECAMP_ACCOUNT_ID" => ENV.fetch("BASECAMP_ACCOUNT_ID", ""),
-            },
+            env: env,
           )
         end
 

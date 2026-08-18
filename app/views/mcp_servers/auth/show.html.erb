@@ -91,13 +91,22 @@
   <% fields.each do |field| %>
     <% stored = @server.auth_field_value(field) %>
     <% password = field[:type] == "password" %>
+    <% textarea = field[:type] == "textarea" %>
     <div>
       <%= label_tag field[:name], field[:label], class: "mb-2 block font-semibold" %>
-      <%= text_field_tag field[:name], (password ? nil : stored),
-            type: password ? "password" : "text",
-            class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
-            autocomplete: "off",
-            placeholder: (password && stored.present? ? "•••••••• (saved — leave blank to keep)" : nil) %>
+      <% if textarea %>
+        <%= text_area_tag field[:name], nil,
+              rows: 8,
+              class: "w-full rounded-lg border border-stone-300 px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950",
+              autocomplete: "off",
+              placeholder: (@server.respond_to?(:cli_credentials_present?) && @server.cli_credentials_present? ? "credentials.json already on server — leave blank to keep" : nil) %>
+      <% else %>
+        <%= text_field_tag field[:name], (password ? nil : stored),
+              type: password ? "password" : "text",
+              class: "w-full rounded-lg border border-stone-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950",
+              autocomplete: "off",
+              placeholder: (password && stored.present? ? "•••••••• (saved — leave blank to keep)" : nil) %>
+      <% end %>
       <% if field[:help].present? %>
         <p class="mt-1 text-sm text-stone-600"><%= field[:help] %></p>
       <% end %>

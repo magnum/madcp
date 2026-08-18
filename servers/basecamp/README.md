@@ -12,24 +12,26 @@ ${MADCP_PUBLIC_URL}/servers/basecamp/mcp
 
 Operator UI: `/servers/basecamp/auth`
 
-## Credentials
+## Credentials (recommended: CLI credentials file)
 
-1. On a machine with a browser: `basecamp auth login` (re-login if tokens stop working — this is not a developer-portal renewal).
-2. Copy the token: `basecamp auth token --quiet`
-3. Set the numeric **account ID** (from `https://3.basecamp.com/<account_id>/…` or `basecamp accounts list`).
-4. Paste **account ID**, then **token**, into `/servers/basecamp/auth`.
+Importing `credentials.json` lets the Basecamp CLI refresh OAuth tokens on the server. MadCP runs a weekly `ServerAuthTokenRefreshJob` that calls `refresh_service_token!` (CLI `me` + sync access token). There is **no** separate job class under `servers/basecamp/` — provider logic lives on the server model, same pattern as Twitter/Google.
 
-CLI config/cache live under `./data/cli/basecamp` and `./data/cli/basecamp-cache` in Docker.
+1. On a trusted machine: `BASECAMP_NO_KEYRING=1 basecamp auth login`
+2. Copy `~/.config/basecamp/credentials.json` into the auth form (or scp it to the server CLI path under `storage/mcp/basecamp/home/.config/basecamp/`).
+3. Set the numeric **account ID** (`https://3.basecamp.com/<account_id>/…` or `basecamp accounts list`).
+4. Save credentials on `/servers/basecamp/auth`.
+
+**Fallback:** paste only `basecamp auth token --quiet` — works until the access token expires (~2 weeks), with no background refresh.
 
 ## Environment
 
 | Variable | Purpose |
 | --- | --- |
-| `BASECAMP_TOKEN` | Access token (also set via the auth form) |
+| `BASECAMP_TOKEN` | Access token (optional when credentials.json is present; synced after CLI refresh) |
 | `BASECAMP_ACCOUNT_ID` | Default account ID |
 | `BASECAMP_ALLOW_WRITE` | Enable write tools |
 | `BASECAMP_TIMEOUT` | CLI timeout seconds (default `30`) |
-| `BASECAMP_NO_KEYRING` | Set in the image (`1`) for file-backed credentials in Docker |
+| `BASECAMP_NO_KEYRING` | Forced `1` for MadCP CLI invocations (file-backed credentials) |
 
 ## Tools
 
@@ -37,6 +39,6 @@ About **38** tools (projects, todos, cards, messages, comments, chat, files, sch
 
 ## Files
 
-- `server.rb` — MCP tools and auth form
+- `server.rb` — MCP tools, auth form, `refresh_service_token!`
 - `basecamp_client.rb` — thin CLI wrapper
 - `skills/basecamp/SKILL.md` — vendored agent skill
