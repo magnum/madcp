@@ -20,7 +20,7 @@ as defined by the routes in the `admin/` namespace
     ) if accessible_action?(model_from_resource(resource), :index) %>
   <% end %>
 
-  <%= link_to "Jobs", "/jobs", class: "navigation__link navigation__link--inactive", target: "_blank" if current_user.admin? %>
+  <%= link_to "Jobs", "/jobs", class: "navigation__link navigation__link--inactive" if current_user.admin? %>
 
   <div class="locale flex flex-row gap-2 mt-4 mb-4">
     <% I18n.available_locales.each do |locale| %>
