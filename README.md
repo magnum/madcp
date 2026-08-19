@@ -1,4 +1,4 @@
-# EmCP (Rails 8)
+# EmCP
 
 EmCP is a self-hosted [Model Context Protocol](https://modelcontextprotocol.io/) host built on **Rails 8**, based on the [`railsapp`](../railsapp) template.
 
