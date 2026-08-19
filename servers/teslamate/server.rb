@@ -14,13 +14,6 @@ module Emcp
         version "0.1.0"
 
         QUERIES_DIR = File.expand_path("queries", __dir__)
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use TeslaMate tools to query vehicle analytics from the TeslaMate database. " \
@@ -121,8 +114,6 @@ module Emcp
           define_schema_tool
           define_run_sql_tool
         end
-
-        protected
 
         def credential_env_keys
           %w[

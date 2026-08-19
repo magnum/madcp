@@ -23,13 +23,6 @@ module Emcp
           "quotedFileContent,replies(id,content,htmlContent,author,createdTime,modifiedTime,action)"
         DEFAULT_REPLY_FIELDS =
           "id,content,htmlContent,author,createdTime,modifiedTime,action"
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use typed Google Docs and Sheets tools for common document editing. " \
@@ -258,8 +251,6 @@ module Emcp
         rescue StandardError
           false
         end
-
-        protected
 
         def credential_env_keys
           %w[

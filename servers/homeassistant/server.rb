@@ -10,13 +10,6 @@ module Emcp
         display_name "Home Assistant"
         description "States, services, devices, and areas through the Home Assistant CLI (hass-cli)."
         version "0.1.0"
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use Home Assistant tools to inspect and control a Home Assistant instance via hass-cli. " \
@@ -134,8 +127,6 @@ module Emcp
         def replace_client!
           @client = Client.new
         end
-
-        protected
 
         def credential_env_keys = %w[HASS_SERVER HASS_TOKEN]
 

@@ -24,7 +24,7 @@ module McpServer::ServiceTokenRefresh
   end
 
   # Override in integrations that can renew provider tokens without operator re-auth.
-  # Return true when credentials were updated.
+  # Public: ServerAuthTokenRefreshJob calls this. Return true when credentials were updated.
   def refresh_service_token!
     false
   end

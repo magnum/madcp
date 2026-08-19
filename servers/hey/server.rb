@@ -19,13 +19,6 @@ module Emcp
         HEY_BULLET_LINE = /\A[[:blank:]]*[-–—*•][[:blank:]]+(.+?)\z/
         HEY_NUMBERED_LINE = /\A[[:blank:]]*\d+[.)][[:blank:]]+(.+?)\z/
         HEY_PARAGRAPH_SPACER = "<div><br></div>"
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use HEY tools to read and manage email and personal productivity data. " \
@@ -100,6 +93,8 @@ module Emcp
         def replace_client!
           @client = Client.new
         end
+
+        def credential_env_keys = []
 
         # HEY/Action Text renders content as HTML: plain newlines collapse to spaces.
         # Convert MCP plain text / paragraphs into Trix-friendly HTML with paragraph gaps

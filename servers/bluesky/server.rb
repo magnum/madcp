@@ -13,14 +13,6 @@ module Emcp
 
         def self.default_service_token_refresh_in_minutes = 90
 
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
-
         def instructions
           "Use Bluesky tools to read and write AT Protocol social data. " \
             "Actor arguments accept a handle (example.bsky.social) or DID. " \
@@ -141,7 +133,14 @@ module Emcp
           define_write_tools
         end
 
-        protected
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_session!
+          true
+        rescue StandardError
+          false
+        end
 
         def credential_env_keys
           %w[
@@ -156,15 +155,6 @@ module Emcp
 
         def replace_client!
           @client = build_client
-        end
-
-        def refresh_service_token!
-          load_credentials!
-          replace_client!
-          @client.refresh_session!
-          true
-        rescue StandardError
-          false
         end
 
         private

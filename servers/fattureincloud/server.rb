@@ -41,13 +41,6 @@ module Emcp
           per_page: { type: "integer", description: "Items per page" },
           q: { type: "string", description: "API search/filter query" },
         }.freeze
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use Fatture in Cloud tools to read company accounting data. " \
@@ -193,7 +186,11 @@ module Emcp
           define_collection_tools("suppliers", "/entities/suppliers", "supplier")
         end
 
-        protected
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_access_token!
+        end
 
         def credential_env_keys
           %w[
@@ -208,12 +205,6 @@ module Emcp
 
         def replace_client!
           @client = build_client
-        end
-
-        def refresh_service_token!
-          load_credentials!
-          replace_client!
-          @client.refresh_access_token!
         end
 
         private

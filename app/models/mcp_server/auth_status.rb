@@ -10,6 +10,7 @@ module McpServer::AuthStatus
       return cached if cached
     end
 
+    # Live provider/CLI check. Each server must implement fetch_auth_status.
     status = fetch_auth_status
     write_auth_status_cache(status, ttl)
     status
@@ -21,7 +22,6 @@ module McpServer::AuthStatus
   end
 
   def auth_status_cache_ttl = 0
-  def fetch_auth_status = { authenticated: false }
 
   def auth_field_value(field)
     raw =

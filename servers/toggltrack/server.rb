@@ -10,13 +10,6 @@ module Emcp
         display_name "Toggl Track"
         description "Time entries, projects, tags, organizations, and workspaces through the Toggl Track API v9."
         version "0.1.0"
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use Toggl Track tools to inspect and manage time tracking data. " \
@@ -133,8 +126,6 @@ module Emcp
           define_tag_tools
           define_time_entry_tools
         end
-
-        protected
 
         def credential_env_keys
           %w[

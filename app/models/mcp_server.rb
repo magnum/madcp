@@ -182,6 +182,7 @@ class McpServer < ApplicationRecord
   def allow_write_methods? = allow_write?
   def token_refresh_enabled? = token_refresh_in_minutes.to_i.positive?
 
+  # Optional display / auth-form hooks. Override in servers/*/server.rb.
   def instructions = "#{display_name} MCP integration."
   def auth_fields = []
   def auth_help_content = nil
@@ -198,9 +199,16 @@ class McpServer < ApplicationRecord
   # Non-empty form values win over ENV / stored credentials; blank password fields keep existing.
   def prepare_provider_oauth!(_params) = nil
 
+  # Required integration contract. Concrete servers in servers/*/server.rb must implement these.
+  # Optional: refresh_service_token! defaults to false (see McpServer::ServiceTokenRefresh).
   def configure_tools = raise(NotImplementedError)
   def apply_credentials(_params) = raise(NotImplementedError)
   def clear_credentials! = raise(NotImplementedError)
+  def fetch_auth_status = raise(NotImplementedError)
+  def replace_client! = raise(NotImplementedError)
+  def credential_env_keys = raise(NotImplementedError)
+
+  # Required only for OAuth-provider servers (Twitter, Fatture in Cloud, …).
   def oauth_call(callback_url:, state:) = raise(NotImplementedError)
   def oauth_exchange(callback_url:, params:, state_data: nil) = raise(NotImplementedError)
 
@@ -258,5 +266,12 @@ class McpServer < ApplicationRecord
     @tools = []
     @resources = []
     load_credentials! if code.present?
+    ensure_runtime_client
+  end
+
+  def ensure_runtime_client
+    return if defined?(@client) && @client
+
+    replace_client!
   end
 end

@@ -40,13 +40,6 @@ module Emcp
 
         DEFAULT_TWEET_FIELDS = "created_at,public_metrics,lang,conversation_id,in_reply_to_user_id,referenced_tweets"
         DEFAULT_USER_FIELDS = "created_at,description,public_metrics,verified,profile_image_url"
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use Twitter/X tools to inspect and manage posts and social graph data via API v2. " \
@@ -222,7 +215,11 @@ module Emcp
           scopes.join(" ")
         end
 
-        protected
+        def refresh_service_token!
+          load_credentials!
+          replace_client!
+          @client.refresh_access_token!
+        end
 
         def credential_env_keys
           %w[
@@ -238,12 +235,6 @@ module Emcp
 
         def replace_client!
           @client = build_client
-        end
-
-        def refresh_service_token!
-          load_credentials!
-          replace_client!
-          @client.refresh_access_token!
         end
 
         private

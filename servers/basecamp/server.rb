@@ -17,13 +17,6 @@ module Emcp
           limit: { type: "integer", description: "Maximum number of items" },
           fetch_all: { type: "boolean", description: "Fetch all pages instead of applying limit" },
         }.freeze
-        after_initialize :ensure_runtime_client
-        after_find :ensure_runtime_client
-
-        def ensure_runtime_client
-          return if defined?(@client) && @client
-          replace_client! if respond_to?(:replace_client!, true)
-        end
 
         def instructions
           "Use Basecamp tools to inspect and manage project data. " \
@@ -219,8 +212,6 @@ module Emcp
         def cli_credentials_present?
           File.file?(cli_credentials_path) && File.size(cli_credentials_path).positive?
         end
-
-        protected
 
         def credential_env_keys = %w[BASECAMP_TOKEN BASECAMP_ACCOUNT_ID]
 

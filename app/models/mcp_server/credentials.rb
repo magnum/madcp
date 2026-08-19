@@ -161,10 +161,8 @@ module McpServer::Credentials
     raise(detail.empty? ? rejection_message : "#{rejection_message}: #{detail}")
   end
 
-  def credential_env_keys = []
   def oauth_access_env = nil
   def oauth_refresh_env = nil
-  def replace_client!; end
 
   private
 

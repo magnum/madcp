@@ -37,4 +37,12 @@ class ServerAuthTokenRefreshJobTest < ActiveJob::TestCase
       freeze_time { ServerAuthTokenRefreshJob.perform_now(@server) }
     end
   end
+
+  test "refresh_service_token! is public on servers that refresh credentials" do
+    %w[twitter bluesky fattureincloud googleworkspace basecamp].each do |code|
+      server = McpServer.fetch!(code)
+      assert server.respond_to?(:refresh_service_token!),
+        "#{code} must expose refresh_service_token! publicly for ServerAuthTokenRefreshJob"
+    end
+  end
 end
