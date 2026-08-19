@@ -15,13 +15,13 @@
 
   <form class="mt-10 space-y-6" method="post">
     <p class="leading-7 text-stone-700 dark:text-zinc-300">
-      You are signed in with MadCP app auth (Basic user/password or Bearer token). Confirm to revoke MCP client OAuth sessions for this integration.
+      You are signed in with EmCP app auth (Basic user/password or Bearer token). Confirm to revoke MCP client OAuth sessions for this integration.
     </p>
     <label class="flex items-start gap-3 rounded-lg border border-stone-300 bg-stone-100 p-4 dark:border-zinc-700 dark:bg-zinc-900">
       <input class="mt-1 h-5 w-5 accent-stone-950 dark:accent-zinc-100" type="checkbox" name="clear_integration" value="1">
       <span>
         <strong class="block">Also clear <%= h integration.display_name %> credentials</strong>
-        <span class="mt-1 block leading-7 text-stone-600 dark:text-zinc-400">Otherwise only MadCP OAuth sessions are revoked.</span>
+        <span class="mt-1 block leading-7 text-stone-600 dark:text-zinc-400">Otherwise only EmCP OAuth sessions are revoked.</span>
       </span>
     </label>
     <button class="w-full rounded-lg bg-red-800 px-5 py-3 font-bold text-stone-50 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-800 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-600 dark:focus:ring-offset-zinc-950"

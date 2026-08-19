@@ -1,15 +1,15 @@
 # TeslaMate
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for a [TeslaMate](https://github.com/teslamate-org/teslamate) PostgreSQL database. Connects **directly to Postgres** (no TeslaMate HTTP API) and exposes analytics reports as MCP tools.
+EmCP integration for a [TeslaMate](https://github.com/teslamate-org/teslamate) PostgreSQL database. Connects **directly to Postgres** (no TeslaMate HTTP API) and exposes analytics reports as MCP tools.
 
 SQL report definitions are adapted from [magnum/teslamate-mcp](https://github.com/magnum/teslamate-mcp) (MIT; originally [cobanov/teslamate-mcp](https://github.com/cobanov/teslamate-mcp)).
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/teslamate/mcp
+${EMCP_PUBLIC_URL}/servers/teslamate/mcp
 ```
 
 Operator UI: `/servers/teslamate/auth`

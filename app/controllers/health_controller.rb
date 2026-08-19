@@ -13,7 +13,7 @@ class HealthController < ApplicationController
     end
     render json: {
       status: "ok",
-      version: Madcp::VERSION,
+      version: Emcp::VERSION,
       servers: servers,
     }
   rescue StandardError => e

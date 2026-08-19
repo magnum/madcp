@@ -9,10 +9,10 @@ mkdir -p \
   /app/data/cli/hey \
   /app/data/cli/gws \
   /app/logs \
-  /home/madcp/.config/basecamp \
-  /home/madcp/.cache/basecamp \
-  /home/madcp/.config/hey-cli \
-  /home/madcp/.config/gws
-chown -R madcp:madcp /app/data /app/logs /home/madcp/.config /home/madcp/.cache
+  /home/emcp/.config/basecamp \
+  /home/emcp/.cache/basecamp \
+  /home/emcp/.config/hey-cli \
+  /home/emcp/.config/gws
+chown -R emcp:emcp /app/data /app/logs /home/emcp/.config /home/emcp/.cache
 
-exec gosu madcp "$@"
+exec gosu emcp "$@"

@@ -3,7 +3,7 @@
 require "digest"
 require "openssl"
 
-module Madcp
+module Emcp
   # App-level credentials from data/auth_tokens + data/auth_users.
   #
   #   Bearer  → auth_tokens   (TOKEN # label)
@@ -40,11 +40,11 @@ module Madcp
 
     def validate!
       if @secret.empty? && file_has_active_lines?(@users_path)
-        raise "MADCP_SECRET_KEY (or SECRET_KEY) is required to validate #{@users_path}"
+        raise "EMCP_SECRET_KEY (or SECRET_KEY) is required to validate #{@users_path}"
       end
       unless configured?
-        raise "no MadCP auth configured: add tokens to #{@tokens_path} " \
-              "and/or users to #{@users_path} (with MADCP_SECRET_KEY)"
+        raise "no EmCP auth configured: add tokens to #{@tokens_path} " \
+              "and/or users to #{@users_path} (with EMCP_SECRET_KEY)"
       end
     end
 
@@ -93,7 +93,7 @@ module Madcp
 
     def load_tokens
       tokens = []
-      tokens << Token.new(value: @env_token, label: "MADCP_AUTH_TOKEN") unless @env_token.empty?
+      tokens << Token.new(value: @env_token, label: "EMCP_AUTH_TOKEN") unless @env_token.empty?
 
       each_active_line(@tokens_path) do |body, label|
         next if tokens.any? { |t| secure_equals(t.value, body) }
@@ -145,7 +145,7 @@ module Madcp
     end
 
     def secure_equals(a, b)
-      Madcp.secure_equals(a, b)
+      Emcp.secure_equals(a, b)
     end
   end
 end

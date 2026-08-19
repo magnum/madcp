@@ -2,7 +2,7 @@
 
 require "json"
 
-module Madcp
+module Emcp
   module Servers
     module GoogleWorkspace
       class Client < CliClient
@@ -34,7 +34,7 @@ module Madcp
           super(
             bin: ENV.fetch("GOOGLEWORKSPACE_BIN", "gws"),
             timeout: ENV.fetch("GOOGLEWORKSPACE_TIMEOUT", "60").to_i,
-            max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+            max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
             env: env,
           )
         end

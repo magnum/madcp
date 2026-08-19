@@ -39,7 +39,7 @@ class GoogleWorkspaceTest < Minitest::Test
     end
   end
 
-  class RecordingCliClient < Madcp::Servers::GoogleWorkspace::Client
+  class RecordingCliClient < Emcp::Servers::GoogleWorkspace::Client
     attr_reader :args
 
     def run(args, truncate: true)
@@ -49,7 +49,7 @@ class GoogleWorkspaceTest < Minitest::Test
   end
 
   def setup
-    @integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
     @client = RecordingClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -76,7 +76,7 @@ class GoogleWorkspaceTest < Minitest::Test
   def test_drive_comment_create_builds_anchored_body_and_default_fields
     ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
     begin
-      @integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+      @integration = Emcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
       @client = RecordingClient.new
       @integration.instance_variable_set(:@client, @client)
 
@@ -94,7 +94,7 @@ class GoogleWorkspaceTest < Minitest::Test
       assert_equal ["comments"], options[:resources]
       assert_equal "create", options[:method]
       assert_equal "doc-1", options.dig(:params, :fileId)
-      assert_equal Madcp::Servers::GoogleWorkspace::Server::DEFAULT_COMMENT_FIELDS,
+      assert_equal Emcp::Servers::GoogleWorkspace::Server::DEFAULT_COMMENT_FIELDS,
                    options.dig(:params, :fields)
       refute options.dig(:params, :supportsAllDrives)
 
@@ -113,7 +113,7 @@ class GoogleWorkspaceTest < Minitest::Test
   def test_drive_comment_reply_resolve
     ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
     begin
-      @integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+      @integration = Emcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
       @client = RecordingClient.new
       @integration.instance_variable_set(:@client, @client)
 
@@ -129,7 +129,7 @@ class GoogleWorkspaceTest < Minitest::Test
       assert_equal ["replies"], options[:resources]
       assert_equal "create", options[:method]
       assert_equal({ content: "Done", action: "resolve" }, options[:body])
-      assert_equal Madcp::Servers::GoogleWorkspace::Server::DEFAULT_REPLY_FIELDS,
+      assert_equal Emcp::Servers::GoogleWorkspace::Server::DEFAULT_REPLY_FIELDS,
                    options.dig(:params, :fields)
     ensure
       ENV.delete("GOOGLEWORKSPACE_ALLOW_WRITE")
@@ -139,7 +139,7 @@ class GoogleWorkspaceTest < Minitest::Test
   def test_doc_batch_update_sends_direct_edit_requests_only
     old = ENV["GOOGLEWORKSPACE_ALLOW_WRITE"]
     ENV["GOOGLEWORKSPACE_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
+    integration = Emcp::Servers::GoogleWorkspace::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 
@@ -249,7 +249,7 @@ class GoogleWorkspaceTest < Minitest::Test
     ENV["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"] = path
     ENV["GOOGLE_WORKSPACE_CLI_TOKEN"] = "stale-token"
 
-    client = Madcp::Servers::GoogleWorkspace::Client.new
+    client = Emcp::Servers::GoogleWorkspace::Client.new
     env = client.instance_variable_get(:@env)
 
     assert_equal path, env["GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE"]

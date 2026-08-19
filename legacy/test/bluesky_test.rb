@@ -36,7 +36,7 @@ class BlueskyTest < Minitest::Test
     @old_handle = ENV["BLUESKY_HANDLE"]
     ENV["BLUESKY_DID"] = "did:plc:test"
     ENV["BLUESKY_HANDLE"] = "test.bsky.social"
-    @integration = Madcp::Servers::Bluesky::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::Bluesky::Server.new(config: CONFIG)
     @client = RecordingClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -79,7 +79,7 @@ class BlueskyTest < Minitest::Test
   def test_create_post_builds_record
     old = ENV["BLUESKY_ALLOW_WRITE"]
     ENV["BLUESKY_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::Bluesky::Server.new(config: CONFIG)
+    integration = Emcp::Servers::Bluesky::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 
@@ -103,7 +103,7 @@ class BlueskyTest < Minitest::Test
   def test_delete_post_extracts_rkey_from_uri
     old = ENV["BLUESKY_ALLOW_WRITE"]
     ENV["BLUESKY_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::Bluesky::Server.new(config: CONFIG)
+    integration = Emcp::Servers::Bluesky::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 
@@ -153,7 +153,7 @@ class BlueskyTest < Minitest::Test
     ENV.delete("BLUESKY_DID")
 
     persisted = nil
-    client = Madcp::Servers::Bluesky::Client.new(
+    client = Emcp::Servers::Bluesky::Client.new(
       on_session: lambda { |**kwargs| persisted = kwargs },
     )
     original_start = Net::HTTP.method(:start)
@@ -237,7 +237,7 @@ class BlueskyTest < Minitest::Test
     ENV["BLUESKY_REFRESH_JWT"] = "refresh.old"
 
     persisted = nil
-    client = Madcp::Servers::Bluesky::Client.new(
+    client = Emcp::Servers::Bluesky::Client.new(
       on_session: lambda { |**kwargs| persisted = kwargs },
     )
     original_start = Net::HTTP.method(:start)

@@ -3,7 +3,7 @@
 require "cgi"
 require_relative "hey_client"
 
-module Madcp
+module Emcp
   module Servers
     module Hey
       class Server < ::McpServer
@@ -31,7 +31,7 @@ module Madcp
           "Use HEY tools to read and manage email and personal productivity data. " \
             "Call hey_skill before complex workflows. " \
             "For hey_compose / hey_reply prefer the paragraphs array (one idea per item, " \
-            "blank line between ideas). MadCP converts bodies to HTML with real paragraph " \
+            "blank line between ideas). EmCP converts bodies to HTML with real paragraph " \
             "spacing; lines starting with -, –, *, • or 1. become bullet/numbered lists. " \
             "Write tools are disabled unless allow_write_methods is enabled."
         end
@@ -534,4 +534,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::Hey::Server)
+Emcp.register_integration(Emcp::Servers::Hey::Server)

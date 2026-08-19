@@ -8,7 +8,7 @@ require "openssl"
 require "securerandom"
 require "uri"
 
-module Madcp
+module Emcp
   class OAuthProvider
     ACCESS_TTL = 3600
     REFRESH_TTL = 30 * 24 * 3600
@@ -139,7 +139,7 @@ module Madcp
       state_data = @mutex.synchronize { @states.delete(state) }
       raise OAuthError.new(400, "invalid_request", "invalid state") unless state_data
 
-      code = "madcp_#{SecureRandom.hex(16)}"
+      code = "emcp_#{SecureRandom.hex(16)}"
       @mutex.synchronize do
         @auth_codes[code] = state_data.merge(
           code: code,
@@ -201,7 +201,7 @@ module Madcp
 
     private
 
-    def scope = "madcp:#{@integration.id}"
+    def scope = "emcp:#{@integration.id}"
 
     def store_path
       File.join(@config.root, "data", "_oauth", "#{@integration.id}.json")
@@ -288,8 +288,8 @@ module Madcp
     end
 
     def issue_tokens(client_id, subject, resource)
-      access = "madcp_#{SecureRandom.hex(32)}"
-      refresh = "madcp_rt_#{SecureRandom.hex(32)}"
+      access = "emcp_#{SecureRandom.hex(32)}"
+      refresh = "emcp_rt_#{SecureRandom.hex(32)}"
       now = Time.now.to_i
       @mutex.synchronize do
         @access_tokens[access] = {
@@ -311,7 +311,7 @@ module Madcp
       }
     end
 
-    def secure_equals(a, b) = Madcp.secure_equals(a, b)
+    def secure_equals(a, b) = Emcp.secure_equals(a, b)
 
     def append_query(url, values)
       uri = URI.parse(url)

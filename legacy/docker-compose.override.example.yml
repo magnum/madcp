@@ -6,13 +6,13 @@
 #
 # Reload after edits:
 #   touch data/restart.txt
-# or rely on MADCP_AUTO_RELOAD (polls servers/lib/views every second).
+# or rely on EMCP_AUTO_RELOAD (polls servers/lib/views every second).
 
 services:
-  madcp:
+  emcp:
     environment:
-      MADCP_AUTO_RELOAD: "1"
-      MADCP_RESTART_MARKER: /app/data/restart.txt
+      EMCP_AUTO_RELOAD: "1"
+      EMCP_RESTART_MARKER: /app/data/restart.txt
     volumes:
       - ./servers:/app/servers
       - ./lib:/app/lib

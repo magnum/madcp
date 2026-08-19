@@ -3,17 +3,17 @@
 require "openssl"
 require "tmpdir"
 
-ENV["MADCP_PUBLIC_URL"] ||= "http://localhost:8765"
-ENV["MADCP_AUTH_TOKEN"] ||= "static-test-token"
-ENV["MADCP_SECRET_KEY"] ||= "test-secret-key"
-ENV["MADCP_AUTH_USERS_PATH"] ||= File.join(Dir.tmpdir, "madcp-auth-users-#{Process.pid}")
-ENV["MADCP_ALLOWED_HOSTS"] ||= "localhost,127.0.0.1"
-ENV["MADCP_ALLOW_WRITE"] ||= "false"
-ENV["MADCP_REQUEST_LOG"] ||= File.join(Dir.tmpdir, "madcp-test-requests-#{Process.pid}.logs")
+ENV["EMCP_PUBLIC_URL"] ||= "http://localhost:8765"
+ENV["EMCP_AUTH_TOKEN"] ||= "static-test-token"
+ENV["EMCP_SECRET_KEY"] ||= "test-secret-key"
+ENV["EMCP_AUTH_USERS_PATH"] ||= File.join(Dir.tmpdir, "emcp-auth-users-#{Process.pid}")
+ENV["EMCP_ALLOWED_HOSTS"] ||= "localhost,127.0.0.1"
+ENV["EMCP_ALLOW_WRITE"] ||= "false"
+ENV["EMCP_REQUEST_LOG"] ||= File.join(Dir.tmpdir, "emcp-test-requests-#{Process.pid}.logs")
 
-users_path = ENV.fetch("MADCP_AUTH_USERS_PATH")
+users_path = ENV.fetch("EMCP_AUTH_USERS_PATH")
 unless File.file?(users_path)
-  digest = OpenSSL::HMAC.hexdigest("SHA256", ENV.fetch("MADCP_SECRET_KEY"), "secret")
+  digest = OpenSSL::HMAC.hexdigest("SHA256", ENV.fetch("EMCP_SECRET_KEY"), "secret")
   File.write(users_path, "user1:#{digest} # test\n")
 end
 

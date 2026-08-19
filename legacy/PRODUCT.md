@@ -6,7 +6,7 @@ product
 
 ## Users
 
-MadCP is used by its operator to configure integrations, inspect authentication
+EmCP is used by its operator to configure integrations, inspect authentication
 state, manage credentials, and obtain MCP endpoints for AI clients.
 
 ## Product Purpose

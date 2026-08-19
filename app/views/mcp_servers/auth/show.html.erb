@@ -45,7 +45,7 @@
 <% end %>
 
 <% if @server.oauth_token_retrieval? %>
-  <% callback_url = "#{Madcp.public_url}/servers/#{@server.code}/oauth_callback" %>
+  <% callback_url = "#{Emcp.public_url}/servers/#{@server.code}/oauth_callback" %>
   <%= form_with url: provider_oauth_mcp_server_path(@server.code), method: :post,
         data: { turbo: false }, class: "space-y-4" do %>
     <% @server.oauth_app_auth_fields.each do |field| %>
@@ -142,5 +142,5 @@
 </div>
 <p class="mt-3 text-sm text-stone-600">
   <span class="font-semibold">Re-authenticate service</span> clears provider credentials (token, CLI file, OAuth tokens)
-  so you can log in again. <span class="font-semibold">Revoke MCP sessions</span> only disconnects MCP clients from MadCP.
+  so you can log in again. <span class="font-semibold">Revoke MCP sessions</span> only disconnects MCP clients from EmCP.
 </p>

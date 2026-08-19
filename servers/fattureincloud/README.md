@@ -1,13 +1,13 @@
 # Fatture in Cloud
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for [Fatture in Cloud](https://www.fattureincloud.it/) API v2 (companies, archive, invoices, clients, suppliers) using `Net::HTTP` — no CLI binary.
+EmCP integration for [Fatture in Cloud](https://www.fattureincloud.it/) API v2 (companies, archive, invoices, clients, suppliers) using `Net::HTTP` — no CLI binary.
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/fattureincloud/mcp
+${EMCP_PUBLIC_URL}/servers/fattureincloud/mcp
 ```
 
 Operator UI: `/servers/fattureincloud/auth`
@@ -20,26 +20,26 @@ Operator UI: `/servers/fattureincloud/auth`
 2. Register this **exact** redirect URI:
 
    ```text
-   ${MADCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback
+   ${EMCP_PUBLIC_URL}/servers/fattureincloud/oauth_callback
    ```
 
-3. In `/servers/fattureincloud/auth`, choose **Retrieve OAuth token** (you are already signed in with MadCP Basic Auth).
-4. Complete the Fatture consent screen. The browser returns to MadCP’s callback
+3. In `/servers/fattureincloud/auth`, choose **Retrieve OAuth token** (you are already signed in with EmCP Basic Auth).
+4. Complete the Fatture consent screen. The browser returns to EmCP’s callback
    (`/servers/fattureincloud/oauth_callback`). That callback is public (no Basic Auth);
    security is the one-time `state` stored under `data/_oauth/retrieval_states.json`
    (survives process reloads; TTL 10 minutes). Do not reuse an old callback URL.
-5. MadCP exchanges the code, can auto-save the access token, and stores the full OAuth JSON (including `refresh_token`) at:
+5. EmCP exchanges the code, can auto-save the access token, and stores the full OAuth JSON (including `refresh_token`) at:
 
    ```text
    data/fattureincloud/oauth_token.json
    ```
 
-   Access tokens expire in about **24 hours**. On HTTP 401 MadCP automatically exchanges
+   Access tokens expire in about **24 hours**. On HTTP 401 EmCP automatically exchanges
    `FATTUREINCLOUD_REFRESH_TOKEN` (~1 year from last refresh) for a new access + refresh pair
    and persists them. Keep `FATTUREINCLOUD_CLIENT_ID` / `FATTUREINCLOUD_CLIENT_SECRET`
    configured so refresh can run.
 
-   If auto-save fails, the callback page lets you paste the access token (and optional full JSON including `refresh_token`) back into MadCP.
+   If auto-save fails, the callback page lets you paste the access token (and optional full JSON including `refresh_token`) back into EmCP.
 
 Optional: set a default `FATTUREINCLOUD_COMPANY_ID` for company-scoped tools.
 
@@ -56,11 +56,11 @@ Optional: set a default `FATTUREINCLOUD_COMPANY_ID` for company-scoped tools.
 | `FATTUREINCLOUD_ALLOW_WRITE` | Enable write tools (`true` required for create/modify/delete) |
 | `FATTUREINCLOUD_TIMEOUT` | HTTP timeout seconds (default `30`) |
 
-Default OAuth scopes are set in MadCP’s authorize URL — not in Fatture in Cloud’s “Utenti e Permessi” (that page is for sub-users). After changing scopes, **re-run Retrieve OAuth token**; the existing token keeps the old whitelist.
+Default OAuth scopes are set in EmCP’s authorize URL — not in Fatture in Cloud’s “Utenti e Permessi” (that page is for sub-users). After changing scopes, **re-run Retrieve OAuth token**; the existing token keeps the old whitelist.
 
 Write access needs **both**:
 1. OAuth scopes with `:a` (below)
-2. `FATTUREINCLOUD_ALLOW_WRITE=true` (MadCP gate)
+2. `FATTUREINCLOUD_ALLOW_WRITE=true` (EmCP gate)
 
 ```text
 entity.clients:a entity.suppliers:a

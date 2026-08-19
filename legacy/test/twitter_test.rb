@@ -19,7 +19,7 @@ class TwitterTest < Minitest::Test
     def get(path, query: {}, raise_on_error: true)
       @calls << [:get, path, { query: query }]
       if path == "/users/me"
-        { status: 200, headers: {}, body: { "data" => { "id" => "42", "username" => "madcp" } } }
+        { status: 200, headers: {}, body: { "data" => { "id" => "42", "username" => "emcp" } } }
       else
         { status: 200, headers: {}, body: { "ok" => true, "path" => path } }
       end
@@ -60,7 +60,7 @@ class TwitterTest < Minitest::Test
     ENV["TWITTER_TOKEN"] = "test-token"
     ENV["TWITTER_CLIENT_ID"] = "client-id"
     ENV["TWITTER_CLIENT_SECRET"] = "client-secret"
-    @integration = Madcp::Servers::Twitter::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::Twitter::Server.new(config: CONFIG)
     @client = RecordingClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -86,7 +86,7 @@ class TwitterTest < Minitest::Test
 
   def test_oauth_call_includes_pkce_challenge_and_verifier
     result = @integration.oauth_call(
-      callback_url: "https://madcp.example/servers/twitter/oauth_callback",
+      callback_url: "https://emcp.example/servers/twitter/oauth_callback",
       state: "state-1",
     )
 
@@ -103,7 +103,7 @@ class TwitterTest < Minitest::Test
 
   def test_oauth_exchange_uses_state_data_code_verifier
     result = @integration.oauth_exchange(
-      callback_url: "https://madcp.example/servers/twitter/oauth_callback",
+      callback_url: "https://emcp.example/servers/twitter/oauth_callback",
       params: { "code" => "auth-code" },
       state_data: { code_verifier: "verifier-xyz" },
     )
@@ -139,7 +139,7 @@ class TwitterTest < Minitest::Test
   def test_tweet_create_and_home_timeline
     old = ENV["TWITTER_ALLOW_WRITE"]
     ENV["TWITTER_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::Twitter::Server.new(config: CONFIG)
+    integration = Emcp::Servers::Twitter::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 

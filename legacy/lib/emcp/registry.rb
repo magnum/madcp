@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Madcp
+module Emcp
   class Registry
     def initialize(config:)
       @config = config
@@ -11,9 +11,9 @@ module Madcp
       Dir.glob(File.join(servers_dir, "*", "server.rb")).sort.each do |path|
         require path
       end
-      raise "no integrations registered under #{servers_dir}" if Madcp.integration_classes.empty?
+      raise "no integrations registered under #{servers_dir}" if Emcp.integration_classes.empty?
 
-      Madcp.integration_classes.each { |klass| register(klass) }
+      Emcp.integration_classes.each { |klass| register(klass) }
       self
     end
 

@@ -1,13 +1,13 @@
 # Toggl Track
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for the [Toggl Track API v9](https://engineering.toggl.com/docs/track/) (me, organizations, workspaces, projects, tags, time entries) via `Net::HTTP`.
+EmCP integration for the [Toggl Track API v9](https://engineering.toggl.com/docs/track/) (me, organizations, workspaces, projects, tags, time entries) via `Net::HTTP`.
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/toggltrack/mcp
+${EMCP_PUBLIC_URL}/servers/toggltrack/mcp
 ```
 
 Operator UI: `/servers/toggltrack/auth`
@@ -18,11 +18,11 @@ Operator UI: `/servers/toggltrack/auth`
 2. Note your **organization ID** and **workspace ID**.
 3. Paste them into `/servers/toggltrack/auth`.
 
-MadCP authenticates with HTTP Basic Auth as `token:api_token` (username = API token, password literal `api_token`), as documented by Toggl.
+EmCP authenticates with HTTP Basic Auth as `token:api_token` (username = API token, password literal `api_token`), as documented by Toggl.
 
 ## Security note
 
-Toggl returns `api_token` fields in cleartext on some profile/workspace payloads. The MadCP HTTP client **redacts** nested `api_token` values to `[REDACTED]` before tool results are returned to MCP clients, so tokens do not leak into conversation context.
+Toggl returns `api_token` fields in cleartext on some profile/workspace payloads. The EmCP HTTP client **redacts** nested `api_token` values to `[REDACTED]` before tool results are returned to MCP clients, so tokens do not leak into conversation context.
 
 ## Environment
 
@@ -36,7 +36,7 @@ Toggl returns `api_token` fields in cleartext on some profile/workspace payloads
 
 ## Auth status
 
-The operator UI badge probes `GET /workspaces/:id` when `TOGGLTRACK_WORKSPACE_ID` is set (workspace/org API quota). It falls back to `GET /me` only if no workspace is configured (`/me` is capped at ~30 req/hour). MadCP caches the probe for 10 minutes; the refresh button forces a new check.
+The operator UI badge probes `GET /workspaces/:id` when `TOGGLTRACK_WORKSPACE_ID` is set (workspace/org API quota). It falls back to `GET /me` only if no workspace is configured (`/me` is capped at ~30 req/hour). EmCP caches the probe for 10 minutes; the refresh button forces a new check.
 
 ## Tools
 

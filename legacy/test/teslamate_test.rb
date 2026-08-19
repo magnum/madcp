@@ -62,7 +62,7 @@ class TeslaMateTest < Minitest::Test
     @old_tz = ENV["TESLAMATE_REPORT_TIMEZONE"]
     ENV["TESLAMATE_DATABASE_URL"] = "postgresql://ro:secret@localhost:5432/teslamate"
     ENV["TESLAMATE_REPORT_TIMEZONE"] = "Europe/Rome"
-    @integration = Madcp::Servers::TeslaMate::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::TeslaMate::Server.new(config: CONFIG)
     @client = FakeClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -93,7 +93,7 @@ class TeslaMateTest < Minitest::Test
   end
 
   def test_query_registry_loads_bundled_queries
-    tools = Madcp::Servers::TeslaMate::QueryRegistry.load(
+    tools = Emcp::Servers::TeslaMate::QueryRegistry.load(
       File.expand_path("../servers/teslamate/queries", __dir__),
     )
     assert_equal 30, tools.length
@@ -101,7 +101,7 @@ class TeslaMateTest < Minitest::Test
   end
 
   def test_bind_converts_named_placeholders_and_escapes_percent
-    sql, values = Madcp::Servers::TeslaMate::QueryRegistry.bind(
+    sql, values = Emcp::Servers::TeslaMate::QueryRegistry.bind(
       "SELECT %(days)s::int, '%%' AS pct, %(car_name)s::text",
       { "days" => 7, "car_name" => nil },
     )
@@ -110,25 +110,25 @@ class TeslaMateTest < Minitest::Test
   end
 
   def test_validate_sql_rejects_mutations_and_multi_statements
-    Madcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1")
-    Madcp::Servers::TeslaMate::QueryRegistry.validate_sql("WITH x AS (SELECT 1) SELECT * FROM x")
+    Emcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1")
+    Emcp::Servers::TeslaMate::QueryRegistry.validate_sql("WITH x AS (SELECT 1) SELECT * FROM x")
 
     assert_raises(ArgumentError) do
-      Madcp::Servers::TeslaMate::QueryRegistry.validate_sql("INSERT INTO cars VALUES (1)")
+      Emcp::Servers::TeslaMate::QueryRegistry.validate_sql("INSERT INTO cars VALUES (1)")
     end
     assert_raises(ArgumentError) do
-      Madcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1; SELECT 2")
+      Emcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1; SELECT 2")
     end
     assert_raises(ArgumentError) do
-      Madcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1; DROP TABLE cars")
+      Emcp::Servers::TeslaMate::QueryRegistry.validate_sql("SELECT 1; DROP TABLE cars")
     end
   end
 
   def test_enforce_limit_wraps_when_missing
-    capped = Madcp::Servers::TeslaMate::QueryRegistry.enforce_limit("SELECT * FROM cars", 50)
+    capped = Emcp::Servers::TeslaMate::QueryRegistry.enforce_limit("SELECT * FROM cars", 50)
     assert_equal "SELECT * FROM (SELECT * FROM cars) AS _capped LIMIT 50", capped
 
-    already = Madcp::Servers::TeslaMate::QueryRegistry.enforce_limit("SELECT * FROM cars LIMIT 3", 50)
+    already = Emcp::Servers::TeslaMate::QueryRegistry.enforce_limit("SELECT * FROM cars LIMIT 3", 50)
     assert_equal "SELECT * FROM cars LIMIT 3", already
   end
 
@@ -186,7 +186,7 @@ class TeslaMateTest < Minitest::Test
           default = 7
         TOML
       )
-      tools = Madcp::Servers::TeslaMate::QueryRegistry.load(dir)
+      tools = Emcp::Servers::TeslaMate::QueryRegistry.load(dir)
       assert_equal 1, tools.length
       assert_equal "get_sample", tools.first.name
       assert_equal false, tools.first.uses_tz

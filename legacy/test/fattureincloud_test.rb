@@ -34,7 +34,7 @@ class FattureInCloudTest < Minitest::Test
   def setup
     @old_company_id = ENV["FATTUREINCLOUD_COMPANY_ID"]
     ENV["FATTUREINCLOUD_COMPANY_ID"] = "42"
-    @integration = Madcp::Servers::FattureInCloud::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::FattureInCloud::Server.new(config: CONFIG)
     @client = RecordingClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -94,7 +94,7 @@ class FattureInCloudTest < Minitest::Test
   def test_delete_accepts_id_and_company_without_payload_when_writes_enabled
     old_write_override = ENV["FATTUREINCLOUD_ALLOW_WRITE"]
     ENV["FATTUREINCLOUD_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::FattureInCloud::Server.new(config: CONFIG)
+    integration = Emcp::Servers::FattureInCloud::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 
@@ -147,13 +147,13 @@ class FattureInCloudTest < Minitest::Test
     old_client_secret = ENV["FATTUREINCLOUD_CLIENT_SECRET"]
     ENV["FATTUREINCLOUD_CLIENT_ID"] = "client-id"
     ENV["FATTUREINCLOUD_CLIENT_SECRET"] = "client-secret"
-    callback_url = "https://madcp.example/servers/fattureincloud/oauth_callback"
+    callback_url = "https://emcp.example/servers/fattureincloud/oauth_callback"
 
     authorization = URI(@integration.oauth_call(callback_url: callback_url, state: "random-state")[:authorization_url])
     query = URI.decode_www_form(authorization.query).to_h
     assert_equal callback_url, query.fetch("redirect_uri")
     assert_equal "random-state", query.fetch("state")
-    assert_equal Madcp::Servers::FattureInCloud::Server::DEFAULT_SCOPES, query.fetch("scope")
+    assert_equal Emcp::Servers::FattureInCloud::Server::DEFAULT_SCOPES, query.fetch("scope")
 
     result = @integration.oauth_exchange(callback_url: callback_url, params: { "code" => "oauth-code" })
     method, path, options = @client.calls.last
@@ -182,7 +182,7 @@ class FattureInCloudTest < Minitest::Test
       captured_request = request
       response
     end
-    client = Madcp::Servers::FattureInCloud::Client.new(token: "api-token")
+    client = Emcp::Servers::FattureInCloud::Client.new(token: "api-token")
 
     original_start = Net::HTTP.method(:start)
     Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
@@ -253,7 +253,7 @@ class FattureInCloudTest < Minitest::Test
     ENV["FATTUREINCLOUD_CLIENT_SECRET"] = "client-secret"
 
     persisted = nil
-    client = Madcp::Servers::FattureInCloud::Client.new(
+    client = Emcp::Servers::FattureInCloud::Client.new(
       on_token_refresh: lambda { |**kwargs| persisted = kwargs },
     )
     original_start = Net::HTTP.method(:start)
@@ -319,7 +319,7 @@ class FattureInCloudTest < Minitest::Test
 end
 
 class OAuthTokenRetrievalTest < Minitest::Test
-  class FakeIntegration < Madcp::Integration
+  class FakeIntegration < Emcp::Integration
     server_id "fake-oauth"
     display_name "Fake OAuth"
     oauth_token_retrieval true
@@ -360,11 +360,11 @@ class OAuthTokenRetrievalTest < Minitest::Test
 
   def setup
     @tmpdir = Dir.mktmpdir
-    config = Madcp::Config.new(root: @tmpdir)
-    @registry = Madcp::Registry.new(config: config)
+    config = Emcp::Config.new(root: @tmpdir)
+    @registry = Emcp::Registry.new(config: config)
     @registry.register(FakeIntegration)
-    renderer = Madcp::Renderer.new(views_dir: File.expand_path("../views", __dir__))
-    @app = Madcp::App.configured(config: config, registry: @registry, renderer: renderer)
+    renderer = Emcp::Renderer.new(views_dir: File.expand_path("../views", __dir__))
+    @app = Emcp::App.configured(config: config, registry: @registry, renderer: renderer)
     @request = Rack::MockRequest.new(@app)
   end
 
@@ -487,7 +487,7 @@ class OAuthTokenRetrievalTest < Minitest::Test
     path = File.join(@tmpdir, "data", "_oauth", "retrieval_states.json")
     assert File.file?(path)
 
-    reloaded = Madcp::OAuthRetrievalStore.new(path: path)
+    reloaded = Emcp::OAuthRetrievalStore.new(path: path)
     peeked = reloaded.peek(state)
     assert_equal "fake-oauth", peeked[:server_id]
     assert_equal "pkce-verifier-from-oauth-call", peeked[:code_verifier]

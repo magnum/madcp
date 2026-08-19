@@ -5,7 +5,7 @@ require "json"
 require "net/http"
 require "uri"
 
-module Madcp
+module Emcp
   module Servers
     module TogglTrack
       class Client
@@ -23,7 +23,7 @@ module Madcp
         def initialize(
           token: nil,
           timeout: ENV.fetch("TOGGLTRACK_TIMEOUT", "30").to_i,
-          max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i
+          max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i
         )
           # nil means "read TOGGLTRACK_TOKEN from ENV on each request" so status
           # checks and tools always see credentials saved after boot.
@@ -82,7 +82,7 @@ module Madcp
 
         def api_token
           raw = @token_override.nil? ? ENV["TOGGLTRACK_TOKEN"] : @token_override
-          Madcp.sanitize_env_value(raw)
+          Emcp.sanitize_env_value(raw)
         end
 
         def response_result(response)

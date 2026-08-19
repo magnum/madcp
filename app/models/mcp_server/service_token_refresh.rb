@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Proactive refresh of *provider* credentials (Google, Fatture, Twitter, Bluesky, …).
-# Distinct from MadcpAuthTokenRefreshJob, which only extends MadCP-issued MCP client OAuth TTLs.
+# Distinct from EmcpAuthTokenRefreshJob, which only extends EmCP-issued MCP client OAuth TTLs.
 module McpServer::ServiceTokenRefresh
   extend ActiveSupport::Concern
 

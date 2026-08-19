@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @reference "tailwindcss";
 
-/* Class-based dark mode (html.dark), matching MadCP theme toggle */
+/* Class-based dark mode (html.dark), matching EmCP theme toggle */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {

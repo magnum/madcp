@@ -6,11 +6,11 @@ class McpServers::McpControllerTest < ActionDispatch::IntegrationTest
   setup do
     ENV["API_KEY_HMAC_SECRET_KEY"] ||= "test-api-key-hmac-secret"
     McpServer.discover!
-    @user = User.find_or_create_by!(email: "user1@madcp.local") do |user|
+    @user = User.find_or_create_by!(email: "user1@emcp.local") do |user|
       user.firstname = "User"
       user.lastname = "One"
-      user.password = "madcp-dev-password"
-      user.password_confirmation = "madcp-dev-password"
+      user.password = "emcp-dev-password"
+      user.password_confirmation = "emcp-dev-password"
     end
     @raw_token = @user.api_key!
   end

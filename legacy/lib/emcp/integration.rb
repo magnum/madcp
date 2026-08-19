@@ -4,7 +4,7 @@ require "fileutils"
 require "json"
 require "mcp"
 
-module Madcp
+module Emcp
   ToolDefinition = Data.define(:name, :description, :input_schema, :write, :handler)
   ResourceDefinition = Data.define(:uri, :name, :description, :mime_type, :handler)
 
@@ -141,7 +141,7 @@ module Madcp
     def auth_help_content = nil
 
     # Public auth status with optional TTL cache. Servers implement the probe in
-    # fetch_auth_status; MadCP decides when to reuse a previous result.
+    # fetch_auth_status; EmCP decides when to reuse a previous result.
     # Pass force: true (manual refresh / credential save) to bypass the cache.
     def auth_status(force: false)
       ttl = auth_status_cache_ttl.to_i
@@ -182,7 +182,7 @@ module Madcp
     end
 
     def apply_oauth_token_paste!(access_token:, token_json: nil)
-      token = Madcp.sanitize_env_value(access_token)
+      token = Emcp.sanitize_env_value(access_token)
       raise "Access token is required" if token.empty?
 
       payload = parse_token_json_paste(token_json) || {}
@@ -204,7 +204,7 @@ module Madcp
         elsif field[:env]
           ENV[field[:env]]
         end
-      Madcp.sanitize_env_value(raw)
+      Emcp.sanitize_env_value(raw)
     end
 
     protected
@@ -275,7 +275,7 @@ module Madcp
           key, value = line.split("=", 2)
           next unless key && value && credential_env_keys.include?(key)
 
-          cleaned = Madcp.sanitize_env_value(value)
+          cleaned = Emcp.sanitize_env_value(value)
           if cleaned.empty?
             ENV.delete(key)
           else
@@ -289,14 +289,14 @@ module Madcp
 
     def persist_credentials!(values)
       current = credential_env_keys.to_h do |key|
-        [key, Madcp.sanitize_env_value(ENV[key])]
+        [key, Emcp.sanitize_env_value(ENV[key])]
       end.reject { |_, value| value.empty? }
 
       values.each do |key, value|
         key = key.to_s
         next unless credential_env_keys.include?(key)
 
-        cleaned = Madcp.sanitize_env_value(value)
+        cleaned = Emcp.sanitize_env_value(value)
         if cleaned.empty?
           current.delete(key)
           ENV.delete(key)
@@ -322,7 +322,7 @@ module Madcp
       credential_env_keys.each do |key|
         next unless ENV.key?(key)
 
-        cleaned = Madcp.sanitize_env_value(ENV[key])
+        cleaned = Emcp.sanitize_env_value(ENV[key])
         if cleaned.empty?
           ENV.delete(key)
         else
@@ -398,13 +398,13 @@ module Madcp
 
     def store_oauth_token_payload!(payload, rejection_message:)
       body = stringify_keys(payload)
-      access_token = Madcp.sanitize_env_value(body["access_token"])
+      access_token = Emcp.sanitize_env_value(body["access_token"])
       raise "OAuth response did not include an access_token" if access_token.empty?
       raise "oauth_access_env is not configured" if oauth_access_env.to_s.empty?
 
       persist_oauth_token_payload!(body)
       updates = { oauth_access_env => access_token }
-      updates[oauth_refresh_env] = Madcp.sanitize_env_value(body["refresh_token"]) if oauth_refresh_env
+      updates[oauth_refresh_env] = Emcp.sanitize_env_value(body["refresh_token"]) if oauth_refresh_env
       persist_credentials!(updates)
       replace_client!
       raise rejection_message unless auth_status(force: true)[:authenticated]

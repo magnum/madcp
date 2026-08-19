@@ -6,7 +6,7 @@ require "securerandom"
 require "sinatra/base"
 require "uri"
 
-module Madcp
+module Emcp
   class App < Sinatra::Base
     def self.configured(config:, registry:, renderer:)
       providers = registry.all.to_h do |integration|
@@ -103,7 +103,7 @@ module Madcp
 
       def require_operator_auth!
         unless operator_authenticated?
-          headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
+          headers["WWW-Authenticate"] = 'Basic realm="EmCP"'
           halt 401, "Authentication required"
         end
       end
@@ -210,7 +210,7 @@ module Madcp
           title: integration.display_name,
           integration: integration,
           public_url: config.public_url,
-          repo_url: "https://github.com/magnum/madcp",
+          repo_url: "https://github.com/magnum/emcp",
         }.merge(extra)
       end
 
@@ -237,7 +237,7 @@ module Madcp
         path = request.fullpath.to_s
         return if path == "/healthz" || path.start_with?("/healthz?")
 
-        started = env["madcp.request_started_at"]
+        started = env["emcp.request_started_at"]
         duration_ms =
           if started
             ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
@@ -252,16 +252,16 @@ module Madcp
           status: response.status,
           duration_ms: duration_ms,
           user_agent: request.user_agent,
-          request_body: env["madcp.request_body"],
+          request_body: env["emcp.request_body"],
         )
       rescue StandardError => e
-        warn("[madcp] request logging skipped: #{e.class}: #{e.message}")
+        warn("[emcp] request logging skipped: #{e.class}: #{e.message}")
       end
     end
 
     before do
-      env["madcp.request_started_at"] = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      env["madcp.request_body"] = capture_request_body
+      env["emcp.request_started_at"] = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      env["emcp.request_body"] = capture_request_body
       require_operator_auth! if operator_ui_request?
       verify_transport! if request.path_info.include?("/mcp") ||
                            request.path_info.match?(%r{/servers/[^/]+/tools/})
@@ -279,16 +279,16 @@ module Madcp
     # WWW-Authenticate challenge is the usual way to make the browser forget
     # cached credentials (cancel the dialog = signed out; submit = sign in again).
     get "/logout" do
-      headers["WWW-Authenticate"] = 'Basic realm="MadCP"'
+      headers["WWW-Authenticate"] = 'Basic realm="EmCP"'
       headers["Cache-Control"] = "no-store"
       content_type :html
       status 401
       <<~HTML
         <!doctype html>
         <html lang="en">
-          <head><meta charset="utf-8"><title>MadCP signed out</title></head>
+          <head><meta charset="utf-8"><title>EmCP signed out</title></head>
           <body>
-            <p>Signed out of the MadCP operator UI.</p>
+            <p>Signed out of the EmCP operator UI.</p>
             <p>Cancel the browser login dialog to stay signed out, or enter your credentials again to continue.</p>
             <p><a href="/servers/">Back to integrations</a></p>
           </body>
@@ -304,10 +304,10 @@ module Madcp
         content_type :html
         renderer.page(
           "servers",
-          title: "MadCP integrations",
+          title: "EmCP integrations",
           integrations: registry.all,
           public_url: config.public_url,
-          repo_url: "https://github.com/magnum/madcp",
+          repo_url: "https://github.com/magnum/emcp",
         )
       end
     end

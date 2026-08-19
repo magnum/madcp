@@ -2,7 +2,7 @@
 
 require "open3"
 
-module Madcp
+module Emcp
   class CliError < StandardError; end
 
   class CliClient
@@ -18,16 +18,7 @@ module Madcp
     def run(args, truncate: true)
       raise CliError, "binary '#{@bin}' not found in PATH" unless bin_available?
 
-      child_env = ENV.to_h.dup
-      @env.each do |key, value|
-        key = key.to_s
-        if value.nil?
-          child_env.delete(key)
-        else
-          child_env[key] = value.to_s
-        end
-      end
-
+      child_env = ENV.to_h.merge(@env.transform_values { |value| value.nil? ? nil : value.to_s })
       Open3.popen3(child_env, @bin, *args) do |stdin, stdout, stderr, wait_thr|
         stdin.close
         out_reader = Thread.new { stdout.read }

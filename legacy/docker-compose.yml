@@ -1,17 +1,17 @@
 services:
-  madcp:
+  emcp:
     build: .
     restart: unless-stopped
     env_file:
       - path: .env
         required: false
     ports:
-      - "${MADCP_HOST_PORT:-8765}:8765"
+      - "${EMCP_HOST_PORT:-8765}:8765"
     volumes:
-      # All durable MADCP state on the host under ./data
+      # All durable EMCP state on the host under ./data
       - ./data:/app/data
       - ./logs:/app/logs
-      - ./data/cli/basecamp:/home/madcp/.config/basecamp
-      - ./data/cli/basecamp-cache:/home/madcp/.cache/basecamp
-      - ./data/cli/hey:/home/madcp/.config/hey-cli
-      - ./data/cli/gws:/home/madcp/.config/gws
+      - ./data/cli/basecamp:/home/emcp/.config/basecamp
+      - ./data/cli/basecamp-cache:/home/emcp/.cache/basecamp
+      - ./data/cli/hey:/home/emcp/.config/hey-cli
+      - ./data/cli/gws:/home/emcp/.config/gws

@@ -1,4 +1,4 @@
-# MadCP app auth tokens (static MCP Bearer + optional operator Bearer).
+# EmCP app auth tokens (static MCP Bearer + optional operator Bearer).
 # Active line:   <token> # <label>
 # Disable line:  # <token> # <label>
 #

@@ -7,7 +7,7 @@ require_relative "../server"
 
 class HeyEmailBodyTest < Minitest::Test
   def setup
-    @integration = Madcp::Servers::Hey::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::Hey::Server.new(config: CONFIG)
   end
 
   def test_paragraphs_become_html_divs_with_blank_spacers

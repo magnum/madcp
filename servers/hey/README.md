@@ -1,13 +1,13 @@
 # HEY
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for [HEY](https://hey.com) email and related tools, backed by the official [`basecamp/hey-cli`](https://github.com/basecamp/hey-cli). Also exposes the `hey://skill` resource (official CLI agent skill).
+EmCP integration for [HEY](https://hey.com) email and related tools, backed by the official [`basecamp/hey-cli`](https://github.com/basecamp/hey-cli). Also exposes the `hey://skill` resource (official CLI agent skill).
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/hey/mcp
+${EMCP_PUBLIC_URL}/servers/hey/mcp
 ```
 
 Operator UI: `/servers/hey/auth`
@@ -16,7 +16,7 @@ Operator UI: `/servers/hey/auth`
 
 1. On a machine with a browser: `hey auth login` (or your usual HEY CLI login).
 2. Copy the token: `hey auth token --quiet`
-3. Paste it into `/servers/hey/auth` (MadCP Basic Auth already covers the operator).
+3. Paste it into `/servers/hey/auth` (EmCP Basic Auth already covers the operator).
 
 Credentials are stored via the HEY CLI config volume (`./data/cli/hey` in Docker).
 
@@ -32,7 +32,7 @@ Credentials are stored via the HEY CLI config volume (`./data/cli/hey` in Docker
 
 About **30** tools (mailboxes, threads, compose/reply, calendars, todos, habits, journal, auth/config helpers). Mutations are `write: true` and gated by `HEY_ALLOW_WRITE`.
 
-For `hey_compose` / `hey_reply`, prefer the `paragraphs` array (one idea per item). MadCP converts plain text to Trix/Action Text HTML: blank lines between paragraphs, and lines starting with `-` / `–` / `*` / `•` or `1.` become real `<ul>` / `<ol>` lists.
+For `hey_compose` / `hey_reply`, prefer the `paragraphs` array (one idea per item). EmCP converts plain text to Trix/Action Text HTML: blank lines between paragraphs, and lines starting with `-` / `–` / `*` / `•` or `1.` become real `<ul>` / `<ol>` lists.
 
 ## Files
 

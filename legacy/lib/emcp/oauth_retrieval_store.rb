@@ -3,7 +3,7 @@
 require "fileutils"
 require "json"
 
-module Madcp
+module Emcp
   # Durable one-time states for provider OAuth token retrieval
   # (POST /servers/:id/oauth → GET …/oauth_callback).
   # Kept on disk so reloads / single-process restarts do not break in-flight flows.

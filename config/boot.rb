@@ -5,7 +5,7 @@ require "bootsnap/setup" # Speed up boot time by caching expensive operations.
 
 # Production (Kamal): load shared app env from the persistent storage volume.
 # Does not override variables already set by Kamal (RAILS_MASTER_KEY, APP_HOST, …).
-# Host path: /data/madcp/storage/.env  →  container: /rails/storage/.env
+# Host path: /data/emcp/storage/.env  →  container: /rails/storage/.env
 begin
   require "dotenv"
   storage_env = File.expand_path("../storage/.env", __dir__)

@@ -16,7 +16,7 @@ class McpServerTest < ActiveSupport::TestCase
 
   test "sti fetch returns concrete class" do
     server = McpServer.fetch!("teslamate")
-    assert_instance_of Madcp::Servers::TeslaMate::Server, server
+    assert_instance_of Emcp::Servers::TeslaMate::Server, server
   end
 
   test "token_refresh_in_minutes blank disables scheduled refresh" do
@@ -42,12 +42,12 @@ class McpServerTest < ActiveSupport::TestCase
   end
 
   test "provider defaults for service_token_refresh_in_minutes" do
-    assert_equal 1_440, Madcp::Servers::GoogleWorkspace::Server.default_service_token_refresh_in_minutes
-    assert_equal 1_320, Madcp::Servers::FattureInCloud::Server.default_service_token_refresh_in_minutes
-    assert_equal 90, Madcp::Servers::Twitter::Server.default_service_token_refresh_in_minutes
-    assert_equal 90, Madcp::Servers::Bluesky::Server.default_service_token_refresh_in_minutes
-    assert_nil Madcp::Servers::Hey::Server.default_service_token_refresh_in_minutes
-    assert_equal 10_080, Madcp::Servers::Basecamp::Server.default_service_token_refresh_in_minutes
+    assert_equal 1_440, Emcp::Servers::GoogleWorkspace::Server.default_service_token_refresh_in_minutes
+    assert_equal 1_320, Emcp::Servers::FattureInCloud::Server.default_service_token_refresh_in_minutes
+    assert_equal 90, Emcp::Servers::Twitter::Server.default_service_token_refresh_in_minutes
+    assert_equal 90, Emcp::Servers::Bluesky::Server.default_service_token_refresh_in_minutes
+    assert_nil Emcp::Servers::Hey::Server.default_service_token_refresh_in_minutes
+    assert_equal 10_080, Emcp::Servers::Basecamp::Server.default_service_token_refresh_in_minutes
   end
 
   test "teslamate tool catalog includes reports and run_sql" do

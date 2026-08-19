@@ -37,7 +37,7 @@ module McpServer::Tools
   protected
 
   def define_tool(name:, description:, properties: {}, required: [], write: false, &handler)
-    tools << Madcp::ToolDefinition.new(
+    tools << Emcp::ToolDefinition.new(
       name: name,
       description: description,
       input_schema: { properties: properties, required: required },
@@ -47,7 +47,7 @@ module McpServer::Tools
   end
 
   def define_resource(uri:, name:, description:, mime_type: "text/plain", &handler)
-    resources << Madcp::ResourceDefinition.new(
+    resources << Emcp::ResourceDefinition.new(
       uri: uri,
       name: name,
       description: description,
@@ -69,7 +69,7 @@ module McpServer::Tools
 
   def cli_response(client, args)
     text_response(client.run(args))
-  rescue Madcp::CliError => e
+  rescue Emcp::CliError => e
     text_response("ERROR: #{e.message}")
   end
 

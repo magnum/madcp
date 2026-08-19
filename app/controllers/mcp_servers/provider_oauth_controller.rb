@@ -14,7 +14,7 @@ module McpServers
 
       state = SecureRandom.hex(24)
       result = mcp_server.oauth_call(
-        callback_url: "#{Madcp.public_url}/servers/#{mcp_server.code}/oauth_callback",
+        callback_url: "#{Emcp.public_url}/servers/#{mcp_server.code}/oauth_callback",
         state: state,
       )
       mcp_server.mcp_provider_oauth_states.create!(
@@ -44,7 +44,7 @@ module McpServers
       state_data = row.payload
       row.destroy!
       result = mcp_server.oauth_exchange(
-        callback_url: "#{Madcp.public_url}/servers/#{mcp_server.code}/oauth_callback",
+        callback_url: "#{Emcp.public_url}/servers/#{mcp_server.code}/oauth_callback",
         params: params.to_unsafe_h,
         state_data: state_data,
       )
@@ -87,7 +87,7 @@ module McpServers
       case code
       when "invalid_scope"
         "X rejected the OAuth scopes (#{detail}). In the Developer Portal set App permissions to " \
-          "match the scopes MadCP requests (Read for the default set; Read and write if you enabled " \
+          "match the scopes EmCP requests (Read for the default set; Read and write if you enabled " \
           "TWITTER_ALLOW_WRITE or custom TWITTER_OAUTH_SCOPES). You can also set a minimal " \
           "TWITTER_OAUTH_SCOPES=tweet.read users.read offline.access to test."
       else

@@ -3,18 +3,18 @@
 require "digest"
 require "openssl"
 
-require_relative "madcp/app_auth"
-require_relative "madcp/config"
-require_relative "madcp/cli_client"
-require_relative "madcp/integration"
-require_relative "madcp/registry"
-require_relative "madcp/renderer"
-require_relative "madcp/oauth_provider"
-require_relative "madcp/oauth_retrieval_store"
-require_relative "madcp/request_logger"
-require_relative "madcp/app"
+require_relative "emcp/app_auth"
+require_relative "emcp/config"
+require_relative "emcp/cli_client"
+require_relative "emcp/integration"
+require_relative "emcp/registry"
+require_relative "emcp/renderer"
+require_relative "emcp/oauth_provider"
+require_relative "emcp/oauth_retrieval_store"
+require_relative "emcp/request_logger"
+require_relative "emcp/app"
 
-module Madcp
+module Emcp
   VERSION = "0.1.0"
 
   # Trim whitespace and strip shell/dotenv-style comments: everything from the

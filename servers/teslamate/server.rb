@@ -4,7 +4,7 @@ require "pathname"
 require_relative "query_registry"
 require_relative "postgres_client"
 
-module Madcp
+module Emcp
   module Servers
     module TeslaMate
       class Server < ::McpServer
@@ -32,7 +32,7 @@ module Madcp
         def auth_help_content
           {
             title: "Connect TeslaMate PostgreSQL",
-            description: "MadCP connects directly to your TeslaMate Postgres database " \
+            description: "EmCP connects directly to your TeslaMate Postgres database " \
                          "(same approach as teslamate-mcp). Prefer a dedicated read-only role.",
             steps: [
               "Create a read-only PostgreSQL role with SELECT on TeslaMate tables.",
@@ -46,7 +46,7 @@ module Madcp
                 value: 'psql "$TESLAMATE_DATABASE_URL" -c "SELECT count(*) FROM cars"',
               },
             ],
-            note: "Do not use TeslaMate's Compose superuser for MadCP. " \
+            note: "Do not use TeslaMate's Compose superuser for EmCP. " \
                   "A read-only role limits blast radius if the URL leaks.",
           }
         end
@@ -97,8 +97,8 @@ module Madcp
         end
 
         def apply_credentials(params)
-          url = Madcp.sanitize_env_value(params["teslamate_database_url"])
-          tz = Madcp.sanitize_env_value(params["teslamate_report_timezone"])
+          url = Emcp.sanitize_env_value(params["teslamate_database_url"])
+          tz = Emcp.sanitize_env_value(params["teslamate_report_timezone"])
           apply_credentials_probe!(
             {
               "TESLAMATE_DATABASE_URL" => url,
@@ -143,7 +143,7 @@ module Madcp
         end
 
         def report_timezone
-          tz = Madcp.sanitize_env_value(ENV["TESLAMATE_REPORT_TIMEZONE"])
+          tz = Emcp.sanitize_env_value(ENV["TESLAMATE_REPORT_TIMEZONE"])
           tz.empty? ? "UTC" : tz
         end
 
@@ -256,4 +256,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::TeslaMate::Server)
+Emcp.register_integration(Emcp::Servers::TeslaMate::Server)

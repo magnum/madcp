@@ -20,7 +20,7 @@ module ApiKeyAuthenticatable
     end
   end
 
-  def request_http_token_authentication(realm = "MadCP", message = nil)
+  def request_http_token_authentication(realm = "EmCP", message = nil)
     json_response = { errors: [message || "Access denied"] }
     headers["WWW-Authenticate"] = %(Bearer realm="#{realm.tr('"', "")}")
     render json: json_response, status: :unauthorized

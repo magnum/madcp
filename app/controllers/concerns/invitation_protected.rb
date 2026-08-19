@@ -3,7 +3,7 @@
 module InvitationProtected
   extend ActiveSupport::Concern
 
-  INVITATION_COOKIE = "madcp_invitation"
+  INVITATION_COOKIE = "emcp_invitation"
 
   included do
     # no-op: allow including controller to call require_invitation as before_action

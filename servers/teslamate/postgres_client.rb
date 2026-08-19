@@ -4,7 +4,7 @@ require "bigdecimal"
 require "json"
 require "pg"
 
-module Madcp
+module Emcp
   module Servers
     module TeslaMate
       class PostgresClient
@@ -80,7 +80,7 @@ module Madcp
         private
 
         def database_url
-          Madcp.sanitize_env_value(@database_url || ENV["TESLAMATE_DATABASE_URL"])
+          Emcp.sanitize_env_value(@database_url || ENV["TESLAMATE_DATABASE_URL"])
         end
 
         def with_connection

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Madcp
+module Emcp
   module Servers
     module Basecamp
       class Client < CliClient
@@ -8,7 +8,7 @@ module Madcp
           super(
             bin: ENV.fetch("BASECAMP_BIN", "basecamp"),
             timeout: ENV.fetch("BASECAMP_TIMEOUT", "30").to_i,
-            max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+            max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
             env: env,
           )
         end

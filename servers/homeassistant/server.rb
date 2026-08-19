@@ -2,7 +2,7 @@
 
 require_relative "homeassistant_client"
 
-module Madcp
+module Emcp
   module Servers
     module HomeAssistant
       class Server < ::McpServer
@@ -28,7 +28,7 @@ module Madcp
         def auth_help_content
           {
             title: "Connect Home Assistant",
-            description: "MadCP drives the official hass-cli against your HA instance using " \
+            description: "EmCP drives the official hass-cli against your HA instance using " \
                          "HASS_SERVER and a long-lived access token (HASS_TOKEN).",
             steps: [
               "In Home Assistant open your profile → Long-Lived Access Tokens → Create Token.",
@@ -79,30 +79,30 @@ module Madcp
           version = parse_release_version(raw)
           {
             authenticated: true,
-            server: Madcp.sanitize_env_value(ENV["HASS_SERVER"]),
+            server: Emcp.sanitize_env_value(ENV["HASS_SERVER"]),
             version: version,
           }
         rescue StandardError => e
           {
             authenticated: false,
-            server: Madcp.sanitize_env_value(ENV["HASS_SERVER"]),
+            server: Emcp.sanitize_env_value(ENV["HASS_SERVER"]),
             error: e.message,
           }
         end
 
         def apply_credentials(params)
           load_credentials!
-          server = Madcp.sanitize_env_value(params["hass_server"])
-          token = Madcp.sanitize_env_value(params["hass_token"])
+          server = Emcp.sanitize_env_value(params["hass_server"])
+          token = Emcp.sanitize_env_value(params["hass_token"])
 
           updates = {}
           updates["HASS_SERVER"] = server if server.present?
           updates["HASS_TOKEN"] = token if token.present?
 
           effective_server = updates["HASS_SERVER"].presence ||
-            Madcp.sanitize_env_value(ENV["HASS_SERVER"])
+            Emcp.sanitize_env_value(ENV["HASS_SERVER"])
           effective_token = updates["HASS_TOKEN"].presence ||
-            Madcp.sanitize_env_value(ENV["HASS_TOKEN"])
+            Emcp.sanitize_env_value(ENV["HASS_TOKEN"])
 
           raise "HASS_SERVER is required" if effective_server.empty?
           raise "HASS_TOKEN is required" if effective_token.empty?
@@ -311,4 +311,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::HomeAssistant::Server)
+Emcp.register_integration(Emcp::Servers::HomeAssistant::Server)

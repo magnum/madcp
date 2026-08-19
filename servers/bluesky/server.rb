@@ -2,7 +2,7 @@
 
 require_relative "bluesky_client"
 
-module Madcp
+module Emcp
   module Servers
     module Bluesky
       class Server < ::McpServer
@@ -30,10 +30,10 @@ module Madcp
         def auth_help_content
           {
             title: "Authorize Bluesky",
-            description: "MadCP uses a Bluesky app password with com.atproto.server.createSession " \
+            description: "EmCP uses a Bluesky app password with com.atproto.server.createSession " \
                          "(legacy app-password flow; ATProto OAuth with PAR/DPoP is not used here).",
             steps: [
-              "Open Bluesky Settings → App Passwords and create a password for MadCP.",
+              "Open Bluesky Settings → App Passwords and create a password for EmCP.",
               "Paste your handle (or email) and the app password into this form.",
               "Optional: set BLUESKY_PDS_HOST if your account is not on bsky.social.",
             ],
@@ -97,8 +97,8 @@ module Madcp
         rescue StandardError => e
           {
             authenticated: false,
-            handle: Madcp.sanitize_env_value(ENV["BLUESKY_HANDLE"]),
-            did: Madcp.sanitize_env_value(ENV["BLUESKY_DID"]),
+            handle: Emcp.sanitize_env_value(ENV["BLUESKY_HANDLE"]),
+            did: Emcp.sanitize_env_value(ENV["BLUESKY_DID"]),
             error: e.message,
           }
         end
@@ -655,4 +655,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::Bluesky::Server)
+Emcp.register_integration(Emcp::Servers::Bluesky::Server)

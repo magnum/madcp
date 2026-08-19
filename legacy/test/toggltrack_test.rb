@@ -32,7 +32,7 @@ class TogglTrackTest < Minitest::Test
     @old_organization = ENV["TOGGLTRACK_ORGANIZATION_ID"]
     ENV["TOGGLTRACK_WORKSPACE_ID"] = "99"
     ENV["TOGGLTRACK_ORGANIZATION_ID"] = "7"
-    @integration = Madcp::Servers::TogglTrack::Server.new(config: CONFIG)
+    @integration = Emcp::Servers::TogglTrack::Server.new(config: CONFIG)
     @client = RecordingClient.new
     @integration.instance_variable_set(:@client, @client)
   end
@@ -85,7 +85,7 @@ class TogglTrackTest < Minitest::Test
   def test_time_entry_start_forces_running_duration
     old = ENV["TOGGLTRACK_ALLOW_WRITE"]
     ENV["TOGGLTRACK_ALLOW_WRITE"] = "true"
-    integration = Madcp::Servers::TogglTrack::Server.new(config: CONFIG)
+    integration = Emcp::Servers::TogglTrack::Server.new(config: CONFIG)
     client = RecordingClient.new
     integration.instance_variable_set(:@client, client)
 
@@ -102,7 +102,7 @@ class TogglTrackTest < Minitest::Test
     assert_equal(-1, options.dig(:body, "duration"))
     assert_equal 99, options.dig(:body, "workspace_id")
     assert_equal "Deep work", options.dig(:body, "description")
-    assert_equal "madcp", options.dig(:body, "created_with")
+    assert_equal "emcp", options.dig(:body, "created_with")
   ensure
     ENV["TOGGLTRACK_ALLOW_WRITE"] = old
   end
@@ -110,7 +110,7 @@ class TogglTrackTest < Minitest::Test
   def test_auth_status_reports_missing_token_without_network
     old = ENV["TOGGLTRACK_TOKEN"]
     ENV.delete("TOGGLTRACK_TOKEN")
-    @integration.instance_variable_set(:@client, Madcp::Servers::TogglTrack::Client.new)
+    @integration.instance_variable_set(:@client, Emcp::Servers::TogglTrack::Client.new)
     @integration.invalidate_auth_status!
     status = @integration.auth_status(force: true)
 
@@ -186,7 +186,7 @@ class TogglTrackTest < Minitest::Test
       captured_request = request
       response
     end
-    client = Madcp::Servers::TogglTrack::Client.new(token: "secret-token")
+    client = Emcp::Servers::TogglTrack::Client.new(token: "secret-token")
 
     original_start = Net::HTTP.method(:start)
     Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }
@@ -220,7 +220,7 @@ class TogglTrackTest < Minitest::Test
     end
     fake_http = Object.new
     fake_http.define_singleton_method(:request) { |_request| response }
-    client = Madcp::Servers::TogglTrack::Client.new(token: "secret-token")
+    client = Emcp::Servers::TogglTrack::Client.new(token: "secret-token")
 
     original_start = Net::HTTP.method(:start)
     Net::HTTP.define_singleton_method(:start) { |*_args, **_kwargs, &block| block.call(fake_http) }

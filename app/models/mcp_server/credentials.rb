@@ -22,7 +22,7 @@ module McpServer::Credentials
     stored.each do |key, value|
       next unless credential_env_keys.include?(key)
 
-      cleaned = Madcp.sanitize_env_value(value)
+      cleaned = Emcp.sanitize_env_value(value)
       if cleaned.empty?
         ENV.delete(key)
       else
@@ -37,7 +37,7 @@ module McpServer::Credentials
         key, value = line.split("=", 2)
         next unless key && value && credential_env_keys.include?(key)
 
-        cleaned = Madcp.sanitize_env_value(value)
+        cleaned = Emcp.sanitize_env_value(value)
         if cleaned.empty?
           ENV.delete(key)
         else
@@ -55,7 +55,7 @@ module McpServer::Credentials
       key = key.to_s
       next unless credential_env_keys.include?(key)
 
-      cleaned = Madcp.sanitize_env_value(value)
+      cleaned = Emcp.sanitize_env_value(value)
       if cleaned.empty?
         current.delete(key)
         ENV.delete(key)
@@ -123,13 +123,13 @@ module McpServer::Credentials
 
   def store_oauth_token_payload!(payload, rejection_message:)
     body = stringify_keys(payload)
-    access_token = Madcp.sanitize_env_value(body["access_token"])
+    access_token = Emcp.sanitize_env_value(body["access_token"])
     raise "OAuth response did not include an access_token" if access_token.empty?
     raise "oauth_access_env is not configured" if oauth_access_env.to_s.empty?
 
     persist_oauth_token_payload!(body)
     updates = { oauth_access_env => access_token }
-    updates[oauth_refresh_env] = Madcp.sanitize_env_value(body["refresh_token"]) if oauth_refresh_env
+    updates[oauth_refresh_env] = Emcp.sanitize_env_value(body["refresh_token"]) if oauth_refresh_env
     persist_credentials!(updates)
     replace_client!
     raise rejection_message unless auth_status(force: true)[:authenticated]
@@ -176,7 +176,7 @@ module McpServer::Credentials
     credential_env_keys.each do |key|
       next unless ENV.key?(key)
 
-      cleaned = Madcp.sanitize_env_value(ENV[key])
+      cleaned = Emcp.sanitize_env_value(ENV[key])
       if cleaned.empty?
         ENV.delete(key)
       else

@@ -198,9 +198,9 @@ Raw `hey box --json` postings weigh ~4 KB each, so the MCP server projects them 
 
 When calling `hey_compose` / `hey_reply` via MCP, **never** put the whole email in one run-on line.
 
-1. Prefer the **`paragraphs`** argument: an array of strings. MadCP converts them to HTML with a blank spacer between paragraphs (plain `\n` alone is collapsed by HEY/Action Text).
-2. One idea / greeting / closing per paragraph. Bullet or numbered lines may be separate paragraphs — MadCP merges adjacent list items into one `<ul>` / `<ol>`.
-3. Lists: start a line/paragraph with `-`, `–`, `*`, `•`, or `1.` / `2.` — MadCP turns them into real HTML lists (not literal markdown dashes).
+1. Prefer the **`paragraphs`** argument: an array of strings. EmCP converts them to HTML with a blank spacer between paragraphs (plain `\n` alone is collapsed by HEY/Action Text).
+2. One idea / greeting / closing per paragraph. Bullet or numbered lines may be separate paragraphs — EmCP merges adjacent list items into one `<ul>` / `<ol>`.
+3. Lists: start a line/paragraph with `-`, `–`, `*`, `•`, or `1.` / `2.` — EmCP turns them into real HTML lists (not literal markdown dashes).
 4. Put the signature (e.g. `"Sam"`) in the **last** paragraph alone.
 5. Do not put the whole email in one run-on `message` string. If you must use `message`, use real blank lines between paragraphs (or `\n\n`).
 

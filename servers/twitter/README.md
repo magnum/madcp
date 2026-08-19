@@ -1,13 +1,13 @@
 # Twitter / X
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for the [X API v2](https://developer.x.com/en/docs/twitter-api) (users, posts, timelines, search, likes, follows, bookmarks) via `Net::HTTP` and OAuth 2.0 user context.
+EmCP integration for the [X API v2](https://developer.x.com/en/docs/twitter-api) (users, posts, timelines, search, likes, follows, bookmarks) via `Net::HTTP` and OAuth 2.0 user context.
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/twitter/mcp
+${EMCP_PUBLIC_URL}/servers/twitter/mcp
 ```
 
 Operator UI: `/servers/twitter/auth`
@@ -18,22 +18,22 @@ Operator UI: `/servers/twitter/auth`
 2. Open the app → **User authentication settings** (this section must be enabled explicitly):
    - OAuth 2.0: on
    - Type of App: **Web App, Automated App or Bot** (confidential client)
-   - App permissions: **Read and write** (needed for MadCP’s default scopes)
+   - App permissions: **Read and write** (needed for EmCP’s default scopes)
    - Callback URI / Redirect URL — exact match:
 
 ```text
-https://madcp.m6i.it/servers/twitter/oauth_callback
+https://emcp.m6i.it/servers/twitter/oauth_callback
 ```
 
-   (or `${MADCP_PUBLIC_URL}/servers/twitter/oauth_callback` for your host — no trailing slash)
+   (or `${EMCP_PUBLIC_URL}/servers/twitter/oauth_callback` for your host — no trailing slash)
 
-   - Website URL: e.g. `https://madcp.m6i.it` (required by X for user auth)
+   - Website URL: e.g. `https://emcp.m6i.it` (required by X for user auth)
 3. Copy the **OAuth 2.0 Client ID** and **Client Secret** into `/servers/twitter/auth`, then **Save credentials**.
 
    Do **not** use the legacy API Key / API Secret (OAuth 1.0a) here.
 4. Click **Retrieve OAuth token**.
 
-MadCP uses authorization code + PKCE. The token response (including `refresh_token`) is stored under:
+EmCP uses authorization code + PKCE. The token response (including `refresh_token`) is stored under:
 
 ```text
 data/twitter/oauth_token.json
@@ -41,9 +41,9 @@ data/twitter/oauth_token.json
 
 ### “Something went wrong / weren’t able to give access”
 
-That message is returned by **X**, before MadCP sees the callback. Checklist:
+That message is returned by **X**, before EmCP sees the callback. Checklist:
 
-1. Callback URI in the portal is an **exact** copy of the URL MadCP shows (scheme, host, path).
+1. Callback URI in the portal is an **exact** copy of the URL EmCP shows (scheme, host, path).
 2. User authentication settings are saved (OAuth 2.0 + Web App + Website URL).
 3. App permissions match requested scopes (defaults include write/like/follow/bookmark).
 4. You are logged into X in the same browser; try a private window without privacy blockers.

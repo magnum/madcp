@@ -1,10 +1,10 @@
-# MadCP operator users (HTTP Basic Auth for the UI).
+# EmCP operator users (HTTP Basic Auth for the UI).
 # Active line:   username:hmac_sha256_hex # label
 # Disable line:  # username:hmac_sha256_hex # label
 #
-# Digests are HMAC-SHA256(MADCP_SECRET_KEY, password) as 64 lowercase hex chars.
+# Digests are HMAC-SHA256(EMCP_SECRET_KEY, password) as 64 lowercase hex chars.
 # Generate a line:
-#   MADCP_SECRET_KEY=... ruby scripts/hash_auth_password.rb user1 'your-password'
+#   EMCP_SECRET_KEY=... ruby scripts/hash_auth_password.rb user1 'your-password'
 #
 # Copy to data/auth_users (gitignored) and chmod 600.
 # Reload is automatic when the file mtime changes — no restart required.

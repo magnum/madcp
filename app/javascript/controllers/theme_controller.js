@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-const STORAGE_KEY = "madcp-theme"
+const STORAGE_KEY = "emcp-theme"
 
 export default class extends Controller {
   toggle() {

@@ -4,9 +4,9 @@ require "digest"
 require "openssl"
 require "json"
 
-# Reopen the Rails application module (Madcp) with host helpers.
-# Do not define lib/madcp.rb — Zeitwerk will not load it once Madcp exists.
-module Madcp
+# Reopen the Rails application module (Emcp) with host helpers.
+# Do not define lib/emcp.rb — Zeitwerk will not load it once Emcp exists.
+module Emcp
   VERSION = "0.1.0" unless const_defined?(:VERSION)
 
   ToolDefinition = Data.define(:name, :description, :input_schema, :write, :handler) unless const_defined?(:ToolDefinition)
@@ -29,7 +29,7 @@ module Madcp
   end
 
   def public_url
-    ENV.fetch("MADCP_PUBLIC_URL") { ENV.fetch("APP_HOST", "http://localhost:3000") }.to_s.sub(%r{/\z}, "")
+    ENV.fetch("EMCP_PUBLIC_URL") { ENV.fetch("APP_HOST", "http://localhost:3000") }.to_s.sub(%r{/\z}, "")
   end
 
   def apply_env_sanitization!
@@ -53,7 +53,7 @@ module Madcp
   end
 end
 
-Madcp.apply_env_sanitization!
+Emcp.apply_env_sanitization!
 
 # to_prepare re-runs after each code reload in development so STI subclasses
 # under servers/ are rebound to the current McpServer class.

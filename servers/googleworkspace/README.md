@@ -1,13 +1,13 @@
 # Google Workspace
 
-← [Back to project](https://github.com/magnum/madcp)
+← [Back to project](https://github.com/magnum/emcp)
 
-MadCP integration for Google Docs, Sheets, Drive, and the rest of Workspace APIs exposed by the community [`googleworkspace/cli`](https://github.com/googleworkspace/cli) (`gws`). Typed tools cover common Docs/Sheets/Drive flows; Discovery-backed tools reach everything else.
+EmCP integration for Google Docs, Sheets, Drive, and the rest of Workspace APIs exposed by the community [`googleworkspace/cli`](https://github.com/googleworkspace/cli) (`gws`). Typed tools cover common Docs/Sheets/Drive flows; Discovery-backed tools reach everything else.
 
 ## MCP endpoint
 
 ```text
-${MADCP_PUBLIC_URL}/servers/googleworkspace/mcp
+${EMCP_PUBLIC_URL}/servers/googleworkspace/mcp
 ```
 
 Operator UI: `/servers/googleworkspace/auth`
@@ -27,7 +27,7 @@ Paste the exported JSON into `/servers/googleworkspace/auth`. Leave the short-li
 
 Set `GOOGLE_WORKSPACE_PROJECT_ID` for quota / billing attribution (often missing from the export).
 
-In Docker, CLI config lives under `./data/cli/gws`. MadCP also stores credentials under `data/googleworkspace/`.
+In Docker, CLI config lives under `./data/cli/gws`. EmCP also stores credentials under `data/googleworkspace/`.
 
 ## Environment
 
@@ -36,7 +36,7 @@ In Docker, CLI config lives under `./data/cli/gws`. MadCP also stores credential
 | `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` | Path to credentials JSON (set by the auth form) |
 | `GOOGLE_WORKSPACE_CLI_TOKEN` | Discouraged short-lived access token |
 | `GOOGLE_WORKSPACE_PROJECT_ID` | Cloud project ID |
-| `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` | gws config dir (default `/home/madcp/.config/gws` in Docker) |
+| `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` | gws config dir (default `/home/emcp/.config/gws` in Docker) |
 | `GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND` | `file` in Docker |
 | `GOOGLEWORKSPACE_ALLOW_WRITE` | Enable write tools |
 | `GOOGLEWORKSPACE_TIMEOUT` | CLI timeout seconds (default `60`) |
@@ -64,7 +64,7 @@ The public Docs API has **no suggestion/review write mode** (`writeControl` only
 
 Optional `anchor_line` / `quoted_text` / `anchor` on create are best-effort. Google Workspace editor apps treat API-defined anchors as **unanchored** in the UI (comments still appear under All Comments). True paragraph pin-to-text like the Docs UI is not fully available via the Drive Comments API.
 
-`gws` builds its command tree from Google Discovery documents, so newly published methods can be used without changing MadCP. The CLI is community-driven and is not an officially supported Google product.
+`gws` builds its command tree from Google Discovery documents, so newly published methods can be used without changing EmCP. The CLI is community-driven and is not an officially supported Google product.
 
 ## Files
 

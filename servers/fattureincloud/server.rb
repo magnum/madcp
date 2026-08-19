@@ -3,7 +3,7 @@
 require "fileutils"
 require_relative "fattureincloud_client"
 
-module Madcp
+module Emcp
   module Servers
     module FattureInCloud
       class Server < ::McpServer
@@ -16,7 +16,7 @@ module Madcp
         def self.default_service_token_refresh_in_minutes = 1_320
 
         # :a = full write on that resource (create/modify/delete). :r = read-only.
-        # MadCP write tools still require FATTUREINCLOUD_ALLOW_WRITE=true.
+        # EmCP write tools still require FATTUREINCLOUD_ALLOW_WRITE=true.
         # Override with FATTUREINCLOUD_OAUTH_SCOPES if needed; re-authorize after changes.
         DEFAULT_SCOPES = [
           "entity.clients:a",
@@ -60,18 +60,18 @@ module Madcp
           {
             title: "Authorize Fatture in Cloud",
             description: "The simplest option is the OAuth flow available in this form. " \
-                         "MadCP will open Fatture in Cloud and show the returned access token.",
+                         "EmCP will open Fatture in Cloud and show the returned access token.",
             steps: [
               "Configure FATTUREINCLOUD_CLIENT_ID and FATTUREINCLOUD_CLIENT_SECRET.",
               "Register the callback URL shown below in the Fatture in Cloud application.",
-              "Choose Retrieve OAuth token (you are already signed in with MadCP).",
+              "Choose Retrieve OAuth token (you are already signed in with EmCP).",
               "After the callback, the access token is stored in FATTUREINCLOUD_TOKEN " \
                 "(shown in the Access token field). Optionally set Default company ID " \
                 "(FATTUREINCLOUD_COMPANY_ID) separately.",
             ],
             commands: [],
-            note: "MadCP stores the full OAuth token response (including refresh_token) under " \
-                  "data/fattureincloud/oauth_token.json. Access tokens expire in ~24h; MadCP " \
+            note: "EmCP stores the full OAuth token response (including refresh_token) under " \
+                  "data/fattureincloud/oauth_token.json. Access tokens expire in ~24h; EmCP " \
                   "refreshes them automatically using the refresh token (valid ~1 year). " \
                   "The default company ID is optional.",
           }
@@ -117,8 +117,8 @@ module Madcp
 
         def apply_credentials(params)
           load_credentials!
-          token = Madcp.sanitize_env_value(params["fattureincloud_token"])
-          company_id = Madcp.sanitize_env_value(params["fattureincloud_company_id"])
+          token = Emcp.sanitize_env_value(params["fattureincloud_token"])
+          company_id = Emcp.sanitize_env_value(params["fattureincloud_company_id"])
 
           updates = {}
           updates["FATTUREINCLOUD_TOKEN"] = token if token.present?
@@ -128,7 +128,7 @@ module Madcp
           # If company id field is present and blank, keep existing (do not wipe).
 
           effective_token = updates["FATTUREINCLOUD_TOKEN"].presence ||
-            Madcp.sanitize_env_value(ENV["FATTUREINCLOUD_TOKEN"])
+            Emcp.sanitize_env_value(ENV["FATTUREINCLOUD_TOKEN"])
           raise "Fatture in Cloud access token is required" if effective_token.empty?
 
           apply_credentials_probe!(
@@ -353,4 +353,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::FattureInCloud::Server)
+Emcp.register_integration(Emcp::Servers::FattureInCloud::Server)

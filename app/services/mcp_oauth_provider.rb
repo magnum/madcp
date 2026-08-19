@@ -43,7 +43,7 @@ class McpOauthProvider
   end
 
   def scope
-    "madcp:#{@server.code}"
+    "emcp:#{@server.code}"
   end
 
   def authorization_server_metadata
@@ -148,7 +148,7 @@ class McpOauthProvider
     raise OAuthError.new(400, "invalid_request", "invalid state") unless state_row&.active?
 
     client = @server.mcp_oauth_clients.find_by!(client_id: state_row.client_id)
-    code = "madcp_#{SecureRandom.hex(16)}"
+    code = "emcp_#{SecureRandom.hex(16)}"
     @server.mcp_oauth_auth_codes.create!(
       mcp_oauth_client: client,
       code: code,
@@ -213,7 +213,7 @@ class McpOauthProvider
 
     verifier = params["code_verifier"].to_s
     expected = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
-    raise OAuthError.new(400, "invalid_grant", "PKCE verification failed") unless Madcp.secure_equals(expected, data.code_challenge)
+    raise OAuthError.new(400, "invalid_grant", "PKCE verification failed") unless Emcp.secure_equals(expected, data.code_challenge)
 
     data.destroy!
     issue_tokens(client, rotate_refresh: false)
@@ -234,7 +234,7 @@ class McpOauthProvider
     client = @server.mcp_oauth_clients.find_by(client_id: params["client_id"].to_s)
     raise OAuthError.new(401, "invalid_client", "unknown client_id") unless client
     if client.token_endpoint_auth_method != "none" &&
-       !Madcp.secure_equals(params["client_secret"], client.client_secret)
+       !Emcp.secure_equals(params["client_secret"], client.client_secret)
       raise OAuthError.new(401, "invalid_client", "invalid client_secret")
     end
     client
@@ -260,7 +260,7 @@ class McpOauthProvider
     record = relation.order(:id).last
     relation.where.not(id: record.id).delete_all if record
     record ||= @server.mcp_oauth_access_tokens.new(mcp_oauth_client: client)
-    record.token = "madcp_#{SecureRandom.hex(32)}" if record.token.blank?
+    record.token = "emcp_#{SecureRandom.hex(32)}" if record.token.blank?
     record.scope = scope
     record.expires_at = ttl.seconds.from_now
     record.save!
@@ -277,7 +277,7 @@ class McpOauthProvider
       relation.where.not(id: record.id).delete_all if record
       record ||= @server.mcp_oauth_refresh_tokens.new(mcp_oauth_client: client)
     end
-    record.token = "madcp_rt_#{SecureRandom.hex(32)}" if record.token.blank?
+    record.token = "emcp_rt_#{SecureRandom.hex(32)}" if record.token.blank?
     record.scope = scope
     record.expires_at = ttl.seconds.from_now
     record.save!

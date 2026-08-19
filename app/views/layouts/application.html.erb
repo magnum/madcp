@@ -12,7 +12,7 @@
     <script>
       (() => {
         let savedTheme = null
-        try { savedTheme = localStorage.getItem("madcp-theme") } catch (_error) {}
+        try { savedTheme = localStorage.getItem("emcp-theme") } catch (_error) {}
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
         if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
           document.documentElement.classList.add("dark")

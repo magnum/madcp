@@ -5,7 +5,7 @@
 #
 # Optional (env):
 #   REMOTE_DB_SSH               overrides SSH target; default root@<first web host> from config/deploy.yml
-#   REMOTE_STORAGE_PATH         default: host path from deploy volumes (/data/madcp/storage)
+#   REMOTE_STORAGE_PATH         default: host path from deploy volumes (/data/emcp/storage)
 #   DB_SYNC_PRIMARY_ONLY=1      sync only primary (default: primary + cache + queue + cable)
 #
 # You must type yes (any case) when prompted: local databases are always overwritten interactively (no bypass).
@@ -68,7 +68,7 @@ namespace :db do
       abort("Set REMOTE_DB_SSH or define servers.web in config/deploy.yml")
     storage_path = ENV["REMOTE_STORAGE_PATH"].presence ||
       DbRemoteSync.remote_storage_path_default_from_deploy ||
-      "/data/madcp/storage"
+      "/data/emcp/storage"
     primary_only = ENV["DB_SYNC_PRIMARY_ONLY"].present?
 
     roles = primary_only ? %w[primary] : %w[primary cache queue cable]

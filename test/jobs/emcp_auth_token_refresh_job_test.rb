@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class MadcpAuthTokenRefreshJobTest < ActiveJob::TestCase
+class EmcpAuthTokenRefreshJobTest < ActiveJob::TestCase
   setup do
     McpServer.discover!
     @server = McpServer.fetch!("hey")
@@ -14,12 +14,12 @@ class MadcpAuthTokenRefreshJobTest < ActiveJob::TestCase
     )
     @access = @server.mcp_oauth_access_tokens.create!(
       mcp_oauth_client: @client,
-      token: "madcp_#{SecureRandom.hex(8)}",
+      token: "emcp_#{SecureRandom.hex(8)}",
       expires_at: 1.hour.from_now,
     )
     @refresh = @server.mcp_oauth_refresh_tokens.create!(
       mcp_oauth_client: @client,
-      token: "madcp_rt_#{SecureRandom.hex(8)}",
+      token: "emcp_rt_#{SecureRandom.hex(8)}",
       expires_at: 2.days.from_now,
     )
   end
@@ -31,8 +31,8 @@ class MadcpAuthTokenRefreshJobTest < ActiveJob::TestCase
       token_value = @access.token
       expected = @access.expires_at.to_i
 
-      assert_enqueued_with(job: MadcpAuthTokenRefreshJob, at: 45.minutes.from_now) do
-        MadcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: expected)
+      assert_enqueued_with(job: EmcpAuthTokenRefreshJob, at: 45.minutes.from_now) do
+        EmcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: expected)
       end
 
       @access.reload
@@ -48,8 +48,8 @@ class MadcpAuthTokenRefreshJobTest < ActiveJob::TestCase
     stale = @access.expires_at.to_i
     @access.update!(expires_at: 3.hours.from_now)
 
-    assert_no_enqueued_jobs only: MadcpAuthTokenRefreshJob do
-      MadcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: stale)
+    assert_no_enqueued_jobs only: EmcpAuthTokenRefreshJob do
+      EmcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: stale)
     end
 
     assert_equal 3.hours.from_now.to_i, @access.reload.expires_at.to_i
@@ -59,8 +59,8 @@ class MadcpAuthTokenRefreshJobTest < ActiveJob::TestCase
     @server.update!(token_refresh_in_minutes: nil)
     original = @access.expires_at
 
-    assert_no_enqueued_jobs only: MadcpAuthTokenRefreshJob do
-      MadcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: @access.expires_at.to_i)
+    assert_no_enqueued_jobs only: EmcpAuthTokenRefreshJob do
+      EmcpAuthTokenRefreshJob.perform_now(@access, expected_expires_at: @access.expires_at.to_i)
     end
 
     assert_equal original.to_i, @access.reload.expires_at.to_i

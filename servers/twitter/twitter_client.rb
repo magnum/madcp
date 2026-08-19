@@ -5,7 +5,7 @@ require "json"
 require "net/http"
 require "uri"
 
-module Madcp
+module Emcp
   module Servers
     module Twitter
       class Client
@@ -22,7 +22,7 @@ module Madcp
         def initialize(
           token: nil,
           timeout: ENV.fetch("TWITTER_TIMEOUT", "30").to_i,
-          max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+          max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
           on_token_refresh: nil
         )
           @token_override = token
@@ -89,8 +89,8 @@ module Madcp
         end
 
         def exchange_code(callback_url:, code:, code_verifier:)
-          client_id = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
-          client_secret = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
+          client_id = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
+          client_secret = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
           raise Error, "TWITTER_CLIENT_ID is required" if client_id.empty?
           raise Error, "TWITTER_CLIENT_SECRET is required" if client_secret.empty?
           raise Error, "OAuth code is required" if code.to_s.empty?
@@ -110,11 +110,11 @@ module Madcp
         end
 
         def refresh_access_token!
-          refresh = Madcp.sanitize_env_value(ENV["TWITTER_REFRESH_TOKEN"])
+          refresh = Emcp.sanitize_env_value(ENV["TWITTER_REFRESH_TOKEN"])
           return false if refresh.empty?
 
-          client_id = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
-          client_secret = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
+          client_id = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
+          client_secret = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
           return false if client_id.empty? || client_secret.empty?
 
           result = form_token_request(
@@ -130,10 +130,10 @@ module Madcp
           return false unless result[:status].between?(200, 299)
 
           body = result[:body].is_a?(Hash) ? result[:body] : {}
-          access = Madcp.sanitize_env_value(body["access_token"])
+          access = Emcp.sanitize_env_value(body["access_token"])
           return false if access.empty?
 
-          new_refresh = Madcp.sanitize_env_value(body["refresh_token"])
+          new_refresh = Emcp.sanitize_env_value(body["refresh_token"])
           new_refresh = refresh if new_refresh.empty?
           ENV["TWITTER_TOKEN"] = access
           ENV["TWITTER_REFRESH_TOKEN"] = new_refresh
@@ -147,7 +147,7 @@ module Madcp
 
         def access_token
           raw = @token_override.nil? ? ENV["TWITTER_TOKEN"] : @token_override
-          Madcp.sanitize_env_value(raw)
+          Emcp.sanitize_env_value(raw)
         end
 
         def form_token_request(form, client_id:, client_secret:, raise_on_error: true)

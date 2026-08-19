@@ -2,14 +2,14 @@
 # frozen_string_literal: true
 
 # Hash a password for data/auth_users:
-#   MADCP_SECRET_KEY=... ruby scripts/hash_auth_password.rb 'my-password'
+#   EMCP_SECRET_KEY=... ruby scripts/hash_auth_password.rb 'my-password'
 #   ruby scripts/hash_auth_password.rb user1 'my-password'
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
-require "madcp/app_auth"
+require "emcp/app_auth"
 
-secret = ENV.fetch("MADCP_SECRET_KEY") { ENV.fetch("SECRET_KEY", "") }.to_s.strip
-abort "Set MADCP_SECRET_KEY (or SECRET_KEY)" if secret.empty?
+secret = ENV.fetch("EMCP_SECRET_KEY") { ENV.fetch("SECRET_KEY", "") }.to_s.strip
+abort "Set EMCP_SECRET_KEY (or SECRET_KEY)" if secret.empty?
 
 username = nil
 password =
@@ -22,7 +22,7 @@ password =
     abort "Usage: #{$PROGRAM_NAME} [username] password"
   end
 
-digest = Madcp::AppAuth.hash_password(password, secret: secret)
+digest = Emcp::AppAuth.hash_password(password, secret: secret)
 if username
   puts "#{username}:#{digest} # #{username}"
 else

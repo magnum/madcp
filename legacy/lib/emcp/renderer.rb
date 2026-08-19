@@ -2,7 +2,7 @@
 
 require "erb"
 
-module Madcp
+module Emcp
   class Renderer
     class Context
       include ERB::Util
@@ -31,7 +31,7 @@ module Madcp
         "layout",
         **locals.merge(
           content: content,
-          title: locals.fetch(:title, "MadCP"),
+          title: locals.fetch(:title, "EmCP"),
           year: Time.now.year,
         ),
       )

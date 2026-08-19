@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# Extends MadCP-issued MCP client OAuth access/refresh TTLs when
+# Extends EmCP-issued MCP client OAuth access/refresh TTLs when
 # mcp_servers.token_refresh_in_minutes is set. Does not touch provider tokens.
-class MadcpAuthTokenRefreshJob < ApplicationJob
+class EmcpAuthTokenRefreshJob < ApplicationJob
   queue_as :default
   discard_on ActiveJob::DeserializationError
 

@@ -3,7 +3,7 @@
 require "pathname"
 require "toml-rb"
 
-module Madcp
+module Emcp
   module Servers
     module TeslaMate
       ToolParam = Data.define(:name, :type, :description, :required, :default, :minimum, :maximum, :enum)

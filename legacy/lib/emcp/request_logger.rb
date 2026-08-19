@@ -4,7 +4,7 @@ require "json"
 require "fileutils"
 require "time"
 
-module Madcp
+module Emcp
   # Compact request logger (file + stdout). No response bodies.
   class RequestLogger
     SENSITIVE_KEYS = %w[
@@ -46,7 +46,7 @@ module Madcp
         @io.flush if @io.respond_to?(:flush)
       end
     rescue StandardError => e
-      warn("[madcp] request log failed: #{e.class}: #{e.message}")
+      warn("[emcp] request log failed: #{e.class}: #{e.message}")
     end
 
     private
@@ -96,7 +96,7 @@ module Madcp
     end
 
     def format_line(fields)
-      "madcp.request " + fields.map { |key, value| "#{key}=#{quote(value)}" }.join(" ")
+      "emcp.request " + fields.map { |key, value| "#{key}=#{quote(value)}" }.join(" ")
     end
 
     def quote(value)

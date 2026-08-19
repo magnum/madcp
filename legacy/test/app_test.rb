@@ -63,7 +63,7 @@ class AppTest < Minitest::Test
       TOKENS
     )
     File.write(users, "")
-    auth = Madcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: "pepper")
+    auth = Emcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: "pepper")
     assert auth.valid_bearer?("live-token-one")
     assert auth.valid_bearer?("live-token-two")
     refute auth.valid_bearer?("revoked-token")
@@ -82,10 +82,10 @@ class AppTest < Minitest::Test
     tokens = File.join(dir, "auth_tokens")
     users = File.join(dir, "auth_users")
     secret = "pepper"
-    digest = Madcp::AppAuth.hash_password("hunter2", secret: secret)
+    digest = Emcp::AppAuth.hash_password("hunter2", secret: secret)
     File.write(tokens, "")
     File.write(users, "alice:#{digest} # alice\n# bob:#{digest} # bob\n")
-    auth = Madcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: secret)
+    auth = Emcp::AppAuth.new(tokens_path: tokens, users_path: users, secret: secret)
     assert auth.valid_basic?("alice", "hunter2")
     refute auth.valid_basic?("alice", "wrong")
     refute auth.valid_basic?("bob", "hunter2")
@@ -94,10 +94,10 @@ class AppTest < Minitest::Test
   end
 
   def test_requests_are_logged_to_file_and_stdout
-    log_path = ENV.fetch("MADCP_REQUEST_LOG")
+    log_path = ENV.fetch("EMCP_REQUEST_LOG")
     File.write(log_path, "")
     stdout = StringIO.new
-    logger = Madcp::RequestLogger.new(path: log_path, io: stdout, max_chars: 2_000)
+    logger = Emcp::RequestLogger.new(path: log_path, io: stdout, max_chars: 2_000)
 
     logger.log(
       ip: "203.0.113.9",
@@ -121,7 +121,7 @@ class AppTest < Minitest::Test
     out_line = stdout.string.lines.last.to_s
 
     assert_equal file_line, out_line
-    assert_includes file_line, "madcp.request"
+    assert_includes file_line, "emcp.request"
     assert_includes file_line, "ip=203.0.113.9"
     assert_includes file_line, "method=POST"
     assert_includes file_line, "path=/servers/toggltrack/mcp"
@@ -146,15 +146,15 @@ class AppTest < Minitest::Test
   def test_layout_uses_shared_header_footer_partials
     html = RENDERER.page(
       "servers",
-      title: "MadCP integrations",
+      title: "EmCP integrations",
       integrations: REGISTRY.all,
       public_url: CONFIG.public_url,
-      repo_url: "https://github.com/magnum/madcp",
+      repo_url: "https://github.com/magnum/emcp",
     )
 
     assert_includes html, 'id="theme-toggle"'
     assert_includes html, 'href="/logout"'
-    assert_includes html, ">MadCP</a>"
+    assert_includes html, ">EmCP</a>"
     assert_includes html, "MIT License"
     assert_includes html, "/blob/main/LICENSE"
     assert_includes html, "text-5xl"
@@ -227,7 +227,7 @@ class AppTest < Minitest::Test
   def test_logout_challenges_basic_auth_again
     response = @request.get("/logout", "HTTP_HOST" => "localhost")
     assert_equal 401, response.status
-    assert_includes response["WWW-Authenticate"].to_s, 'Basic realm="MadCP"'
+    assert_includes response["WWW-Authenticate"].to_s, 'Basic realm="EmCP"'
     assert_includes response.body, "Signed out"
   end
 
@@ -287,7 +287,7 @@ class AppTest < Minitest::Test
       title: integration.display_name,
       integration: integration,
       public_url: CONFIG.public_url,
-      repo_url: "https://github.com/magnum/madcp",
+      repo_url: "https://github.com/magnum/emcp",
       state: nil,
       error: nil,
       message: nil,
@@ -305,20 +305,20 @@ class AppTest < Minitest::Test
   end
 
   def test_sanitize_env_value_strips_hash_comments
-    assert_equal "proj-1", Madcp.sanitize_env_value("  proj-1  ")
-    assert_equal "", Madcp.sanitize_env_value("# optional")
-    assert_equal "", Madcp.sanitize_env_value("#optional")
-    assert_equal "", Madcp.sanitize_env_value("# required")
-    assert_equal "proj-1", Madcp.sanitize_env_value("proj-1 # optional")
-    assert_equal "abc123", Madcp.sanitize_env_value("abc123 # required")
-    assert_equal "token", Madcp.sanitize_env_value("token#trailing-comment")
-    assert_equal "https://madcp.example.com", Madcp.sanitize_env_value("https://madcp.example.com")
+    assert_equal "proj-1", Emcp.sanitize_env_value("  proj-1  ")
+    assert_equal "", Emcp.sanitize_env_value("# optional")
+    assert_equal "", Emcp.sanitize_env_value("#optional")
+    assert_equal "", Emcp.sanitize_env_value("# required")
+    assert_equal "proj-1", Emcp.sanitize_env_value("proj-1 # optional")
+    assert_equal "abc123", Emcp.sanitize_env_value("abc123 # required")
+    assert_equal "token", Emcp.sanitize_env_value("token#trailing-comment")
+    assert_equal "https://emcp.example.com", Emcp.sanitize_env_value("https://emcp.example.com")
   end
 
   def test_apply_env_sanitization_rewrites_process_env
-    key = "MADCP_TEST_SANITIZE_#{Process.pid}"
+    key = "EMCP_TEST_SANITIZE_#{Process.pid}"
     ENV[key] = "value # required"
-    Madcp.apply_env_sanitization!
+    Emcp.apply_env_sanitization!
     assert_equal "value", ENV[key]
   ensure
     ENV.delete(key)
@@ -362,9 +362,9 @@ class AppTest < Minitest::Test
     integration = REGISTRY.fetch("googleworkspace")
     integration.define_singleton_method(:auth_status) { |force: false| { authenticated: false } }
     old_project = ENV["GOOGLE_WORKSPACE_PROJECT_ID"]
-    ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = "madcp-prefill-project"
+    ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = "emcp-prefill-project"
 
-    assert_equal "madcp-prefill-project", integration.auth_field_value(
+    assert_equal "emcp-prefill-project", integration.auth_field_value(
       integration.auth_fields.find { |field| field[:name] == "googleworkspace_project_id" },
     )
 
@@ -373,13 +373,13 @@ class AppTest < Minitest::Test
       title: integration.display_name,
       integration: integration,
       public_url: CONFIG.public_url,
-      repo_url: "https://github.com/magnum/madcp",
+      repo_url: "https://github.com/magnum/emcp",
       state: nil,
       error: nil,
       message: nil,
     )
 
-    assert_includes html, 'value="madcp-prefill-project"'
+    assert_includes html, 'value="emcp-prefill-project"'
   ensure
     if old_project
       ENV["GOOGLE_WORKSPACE_PROJECT_ID"] = old_project
@@ -397,10 +397,10 @@ class AppTest < Minitest::Test
 
     html = RENDERER.page(
       "servers",
-      title: "MadCP integrations",
+      title: "EmCP integrations",
       integrations: integrations,
       public_url: CONFIG.public_url,
-      repo_url: "https://github.com/magnum/madcp",
+      repo_url: "https://github.com/magnum/emcp",
     )
 
     assert_includes html, "Not authenticated"
@@ -540,7 +540,7 @@ class AppTest < Minitest::Test
 
   def test_oauth_pkce_flow_preserves_client_state
     integration = REGISTRY.fetch("hey")
-    provider = Madcp::OAuthProvider.new(config: CONFIG, integration: integration)
+    provider = Emcp::OAuthProvider.new(config: CONFIG, integration: integration)
     client = provider.register_client(
       "redirect_uris" => ["https://client.example/callback"],
       "token_endpoint_auth_method" => "none",
@@ -571,10 +571,10 @@ class AppTest < Minitest::Test
 
   def test_oauth_clients_and_tokens_persist_across_provider_restarts
     require "tmpdir"
-    Dir.mktmpdir("madcp-oauth") do |root|
-      config = Madcp::Config.new(root: root)
+    Dir.mktmpdir("emcp-oauth") do |root|
+      config = Emcp::Config.new(root: root)
       integration = REGISTRY.fetch("googleworkspace")
-      provider = Madcp::OAuthProvider.new(config: config, integration: integration)
+      provider = Emcp::OAuthProvider.new(config: config, integration: integration)
       client = provider.register_client(
         "redirect_uris" => ["https://client.example/callback"],
         "token_endpoint_auth_method" => "none",
@@ -599,7 +599,7 @@ class AppTest < Minitest::Test
         "code_verifier" => verifier,
       )
 
-      restarted = Madcp::OAuthProvider.new(config: config, integration: integration)
+      restarted = Emcp::OAuthProvider.new(config: config, integration: integration)
       assert restarted.load_access_token(tokens.fetch(:access_token))
 
       refreshed = restarted.token_request(
@@ -609,9 +609,9 @@ class AppTest < Minitest::Test
       )
       assert restarted.load_access_token(refreshed.fetch(:access_token))
 
-      again = Madcp::OAuthProvider.new(config: config, integration: integration)
+      again = Emcp::OAuthProvider.new(config: config, integration: integration)
       assert again.load_access_token(refreshed.fetch(:access_token))
-      assert_raises(Madcp::OAuthProvider::OAuthError) do
+      assert_raises(Emcp::OAuthProvider::OAuthError) do
         again.token_request(
           "grant_type" => "refresh_token",
           "client_id" => client["client_id"],

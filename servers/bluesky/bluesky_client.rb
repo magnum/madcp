@@ -4,7 +4,7 @@ require "json"
 require "net/http"
 require "uri"
 
-module Madcp
+module Emcp
   module Servers
     module Bluesky
       class Client
@@ -22,7 +22,7 @@ module Madcp
         def initialize(
           pds_host: nil,
           timeout: ENV.fetch("BLUESKY_TIMEOUT", "30").to_i,
-          max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+          max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
           on_session: nil
         )
           @pds_host_override = pds_host
@@ -100,8 +100,8 @@ module Madcp
         end
 
         def create_session!
-          identifier = Madcp.sanitize_env_value(ENV["BLUESKY_HANDLE"])
-          password = Madcp.sanitize_env_value(ENV["BLUESKY_APP_PASSWORD"])
+          identifier = Emcp.sanitize_env_value(ENV["BLUESKY_HANDLE"])
+          password = Emcp.sanitize_env_value(ENV["BLUESKY_APP_PASSWORD"])
           raise Error, "Bluesky handle is not configured" if identifier.empty?
           raise Error, "Bluesky app password is not configured" if password.empty?
 
@@ -133,11 +133,11 @@ module Madcp
         end
 
         def did
-          Madcp.sanitize_env_value(ENV["BLUESKY_DID"])
+          Emcp.sanitize_env_value(ENV["BLUESKY_DID"])
         end
 
         def handle
-          Madcp.sanitize_env_value(ENV["BLUESKY_HANDLE"])
+          Emcp.sanitize_env_value(ENV["BLUESKY_HANDLE"])
         end
 
         private
@@ -145,16 +145,16 @@ module Madcp
         def pds_base
           host = @pds_host_override
           host = ENV["BLUESKY_PDS_HOST"] if host.nil?
-          host = DEFAULT_PDS if Madcp.sanitize_env_value(host).empty?
-          Madcp.sanitize_env_value(host).sub(%r{/\z}, "")
+          host = DEFAULT_PDS if Emcp.sanitize_env_value(host).empty?
+          Emcp.sanitize_env_value(host).sub(%r{/\z}, "")
         end
 
         def access_jwt
-          Madcp.sanitize_env_value(ENV["BLUESKY_ACCESS_JWT"])
+          Emcp.sanitize_env_value(ENV["BLUESKY_ACCESS_JWT"])
         end
 
         def refresh_jwt
-          Madcp.sanitize_env_value(ENV["BLUESKY_REFRESH_JWT"])
+          Emcp.sanitize_env_value(ENV["BLUESKY_REFRESH_JWT"])
         end
 
         def session_expired_response?(response)
@@ -181,10 +181,10 @@ module Madcp
 
         def apply_session!(body)
           body = body.is_a?(Hash) ? body : {}
-          access = Madcp.sanitize_env_value(body["accessJwt"] || body[:accessJwt])
-          refresh = Madcp.sanitize_env_value(body["refreshJwt"] || body[:refreshJwt])
-          account_did = Madcp.sanitize_env_value(body["did"] || body[:did])
-          account_handle = Madcp.sanitize_env_value(body["handle"] || body[:handle])
+          access = Emcp.sanitize_env_value(body["accessJwt"] || body[:accessJwt])
+          refresh = Emcp.sanitize_env_value(body["refreshJwt"] || body[:refreshJwt])
+          account_did = Emcp.sanitize_env_value(body["did"] || body[:did])
+          account_handle = Emcp.sanitize_env_value(body["handle"] || body[:handle])
           raise Error, "Bluesky session response missing accessJwt" if access.empty?
           raise Error, "Bluesky session response accessJwt was redacted" if access == "[REDACTED]"
 

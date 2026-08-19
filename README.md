@@ -1,6 +1,6 @@
-# MadCP (Rails 8)
+# EmCP (Rails 8)
 
-MadCP is a self-hosted [Model Context Protocol](https://modelcontextprotocol.io/) host built on **Rails 8**, based on the [`railsapp`](../railsapp) template.
+EmCP is a self-hosted [Model Context Protocol](https://modelcontextprotocol.io/) host built on **Rails 8**, based on the [`railsapp`](../railsapp) template.
 
 Operator UI uses **session login** (`User`). MCP clients authenticate with **ApiKey** Bearer tokens and/or per-server **OAuth 2.1** (PKCE). Integration code still lives under `servers/<code>/` as STI subclasses of `McpServer`.
 
@@ -24,7 +24,7 @@ Put the rest in a single file on the server volume (not in git):
 
 ```bash
 # on the deploy host
-install -m 600 /dev/stdin /data/madcp/storage/.env < .env   # from your machine via scp/ssh
+install -m 600 /dev/stdin /data/emcp/storage/.env < .env   # from your machine via scp/ssh
 ```
 
 That file is mounted at `/rails/storage/.env` and loaded at boot for web + worker. Existing Kamal/env values are not overridden.
@@ -33,14 +33,14 @@ That file is mounted at `/rails/storage/.env` and loaded at boot for web + worke
 
 | Variable | Purpose |
 | --- | --- |
-| `MADCP_PUBLIC_URL` | Public base URL (no trailing slash), used in MCP/OAuth metadata |
-| `MADCP_USER1_PASSWORD` | Password for seeded operator `user1@madcp.local` (dev default: `madcp-dev-password`) |
+| `EMCP_PUBLIC_URL` | Public base URL (no trailing slash), used in MCP/OAuth metadata |
+| `EMCP_USER1_PASSWORD` | Password for seeded operator `user1@emcp.local` (dev default: `emcp-dev-password`) |
 | `API_KEY_HMAC_SECRET_KEY` | HMAC secret for ApiKey digests |
 
 ### Operator login
 
-- Email: `user1@madcp.local`
-- Password: `MADCP_USER1_PASSWORD` (or the development default)
+- Email: `user1@emcp.local`
+- Password: `EMCP_USER1_PASSWORD` (or the development default)
 - Integrations: `/` or `/servers`
 - Auth per server: `/servers/<code>/auth`
 
@@ -49,13 +49,13 @@ That file is mounted at `/rails/storage/.env` and loaded at boot for web + worke
 Endpoint per integration:
 
 ```text
-${MADCP_PUBLIC_URL}/servers/<code>/mcp
+${EMCP_PUBLIC_URL}/servers/<code>/mcp
 ```
 
 **ApiKey (static Bearer)** — in console:
 
 ```ruby
-User.find_by(email: "user1@madcp.local").api_key!
+User.find_by(email: "user1@emcp.local").api_key!
 # => "tkn_usr_..."
 ```
 
@@ -68,8 +68,8 @@ Send `Authorization: Bearer tkn_usr_...`.
 
 ## Architecture
 
-- `McpServer` (AR + STI) owns host behavior formerly in `lib/madcp/integration.rb`
-- `servers/<code>/server.rb` registers with `Madcp.register_integration(...)` and overrides tools/auth
+- `McpServer` (AR + STI) owns host behavior formerly in `lib/emcp/integration.rb`
+- `servers/<code>/server.rb` registers with `Emcp.register_integration(...)` and overrides tools/auth
 - Credentials: encrypted columns + `storage/mcp/<code>/` files for CLI compat
 - MCP OAuth clients/tokens: AR tables (`mcp_oauth_*`)
 
@@ -85,4 +85,4 @@ bin/rails test test/models/mcp_server_test.rb test/services/mcp_oauth_provider_t
 
 ## Deploy notes
 
-Prefer Kamal from the railsapp template (`config/deploy.yml`). Wire `API_KEY_HMAC_SECRET_KEY`, `MADCP_PUBLIC_URL`, and `MADCP_USER1_PASSWORD` into secrets. Keep TeslaMate/Postgres and CLI binaries available to the app container as needed.
+Prefer Kamal from the railsapp template (`config/deploy.yml`). Wire `API_KEY_HMAC_SECRET_KEY`, `EMCP_PUBLIC_URL`, and `EMCP_USER1_PASSWORD` into secrets. Keep TeslaMate/Postgres and CLI binaries available to the app container as needed.

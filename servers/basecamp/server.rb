@@ -2,7 +2,7 @@
 
 require_relative "basecamp_client"
 
-module Madcp
+module Emcp
   module Servers
     module Basecamp
       class Server < ::McpServer
@@ -34,7 +34,7 @@ module Madcp
         def auth_help_content
           {
             title: "Get Basecamp credentials",
-            description: "Prefer importing the Basecamp CLI credentials file so MadCP can refresh tokens " \
+            description: "Prefer importing the Basecamp CLI credentials file so EmCP can refresh tokens " \
                          "in the background. A pasted access token alone expires in ~2 weeks with no refresh.",
             steps: [
               "On a trusted computer: `BASECAMP_NO_KEYRING=1 basecamp auth login` " \
@@ -44,7 +44,7 @@ module Madcp
               "Set the numeric Account ID from https://3.basecamp.com/<account_id>/… " \
                 "or `basecamp accounts list`.",
               "Optional fallback: paste only `basecamp auth token --quiet` (no auto-refresh).",
-              "Save credentials — MadCP schedules a weekly CLI refresh when the credentials file is present.",
+              "Save credentials — EmCP schedules a weekly CLI refresh when the credentials file is present.",
             ],
             commands: [
               { label: "Login (file-backed)", value: "BASECAMP_NO_KEYRING=1 basecamp auth login" },
@@ -110,8 +110,8 @@ module Madcp
 
         def apply_credentials(params)
           load_credentials!
-          account_id = Madcp.sanitize_env_value(params["basecamp_account_id"])
-          token = Madcp.sanitize_env_value(params["basecamp_token"])
+          account_id = Emcp.sanitize_env_value(params["basecamp_account_id"])
+          token = Emcp.sanitize_env_value(params["basecamp_token"])
           credentials_json = params["basecamp_credentials_json"].to_s.strip
 
           old_token = ENV["BASECAMP_TOKEN"]
@@ -125,9 +125,9 @@ module Madcp
           updates["BASECAMP_TOKEN"] = token if token.present?
 
           effective_account = updates["BASECAMP_ACCOUNT_ID"].presence ||
-            Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"])
+            Emcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"])
           effective_token = updates["BASECAMP_TOKEN"].presence ||
-            Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
+            Emcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
 
           raise "Basecamp account ID is required" if effective_account.empty?
           unless cli_credentials_present? || effective_token.present?
@@ -231,14 +231,14 @@ module Madcp
             "BASECAMP_NO_KEYRING" => "1",
             "HOME" => cli_home,
             "XDG_CONFIG_HOME" => File.join(cli_home, ".config"),
-            "BASECAMP_ACCOUNT_ID" => Madcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"]),
+            "BASECAMP_ACCOUNT_ID" => Emcp.sanitize_env_value(ENV["BASECAMP_ACCOUNT_ID"]),
           }
 
           if cli_credentials_present?
             # Let the CLI read/refresh credentials.json — do not pin a stale access token.
             env["BASECAMP_TOKEN"] = nil
           else
-            token = Madcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
+            token = Emcp.sanitize_env_value(ENV["BASECAMP_TOKEN"])
             env["BASECAMP_TOKEN"] = token if token.present?
           end
 
@@ -276,7 +276,7 @@ module Madcp
 
         def sync_access_token_from_cli!
           raw = @client.run(@client.auth_token, truncate: false).to_s.strip
-          token = Madcp.sanitize_env_value(raw)
+          token = Emcp.sanitize_env_value(raw)
           return if token.empty?
 
           persist_credentials!("BASECAMP_TOKEN" => token)
@@ -699,4 +699,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::Basecamp::Server)
+Emcp.register_integration(Emcp::Servers::Basecamp::Server)

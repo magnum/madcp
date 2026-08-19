@@ -2,7 +2,7 @@
 
 require_relative "toggltrack_client"
 
-module Madcp
+module Emcp
   module Servers
     module TogglTrack
       class Server < ::McpServer
@@ -27,7 +27,7 @@ module Madcp
         def auth_help_content
           {
             title: "Authorize Toggl Track",
-            description: "MadCP uses your personal Toggl Track API token with HTTP Basic Auth " \
+            description: "EmCP uses your personal Toggl Track API token with HTTP Basic Auth " \
                          "(token as username and api_token as password), as documented by Toggl Engineering.",
             steps: [
               "Open Toggl Track Profile settings and copy your API token.",
@@ -85,8 +85,8 @@ module Madcp
 
         def fetch_auth_status
           load_credentials!
-          organization_id = Madcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"])
-          workspace_id = Madcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"])
+          organization_id = Emcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"])
+          workspace_id = Emcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"])
 
           if workspace_id.empty?
             probe_me(organization_id: organization_id, workspace_id: workspace_id)
@@ -96,8 +96,8 @@ module Madcp
         rescue StandardError => e
           {
             authenticated: false,
-            organization_id: Madcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"]),
-            workspace_id: Madcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"]),
+            organization_id: Emcp.sanitize_env_value(ENV["TOGGLTRACK_ORGANIZATION_ID"]),
+            workspace_id: Emcp.sanitize_env_value(ENV["TOGGLTRACK_WORKSPACE_ID"]),
             error: e.message,
           }
         end
@@ -400,14 +400,14 @@ module Madcp
                   start: start || Time.now.utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                   duration: -1,
                   workspace_id: workspace,
-                  created_with: "madcp",
+                  created_with: "emcp",
                   stop: nil,
                 ),
               ),
             )
             body["duration"] = -1 unless body["duration"].to_i.negative?
             body["workspace_id"] = workspace
-            body["created_with"] ||= "madcp"
+            body["created_with"] ||= "emcp"
             api_post("/workspaces/#{workspace}/time_entries", body: body)
           end
 
@@ -440,7 +440,7 @@ module Madcp
             workspace = workspace_id_value(workspace_id).to_i
             body = stringify_keys(require_payload(payload))
             body["workspace_id"] ||= workspace
-            body["created_with"] ||= "madcp"
+            body["created_with"] ||= "emcp"
             api_post("/workspaces/#{body["workspace_id"]}/time_entries", body: body)
           end
 
@@ -569,4 +569,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::TogglTrack::Server)
+Emcp.register_integration(Emcp::Servers::TogglTrack::Server)

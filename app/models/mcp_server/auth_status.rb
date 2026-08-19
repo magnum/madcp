@@ -32,7 +32,7 @@ module McpServer::AuthStatus
       elsif field[:env]
         ENV[field[:env]]
       end
-    Madcp.sanitize_env_value(raw)
+    Emcp.sanitize_env_value(raw)
   end
 
   private

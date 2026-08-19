@@ -88,10 +88,23 @@ class McpServer < ApplicationRecord
     end
 
     # servers/ is outside Zeitwerk. After a reload, McpServer is a new class while
-    # previously required Madcp::Servers::* still subclass the old one — break STI.
+    # previously required Emcp::Servers::* still subclass the old one — break STI.
     def discover!
+      rewrite_legacy_sti_types!
       ensure_integrations_loaded!
       sync_from_registry!
+    end
+
+    # After Madcp → Emcp rename, persisted STI `type` values must be rewritten
+    # before any find (otherwise boot fails with SubclassNotFound).
+    def rewrite_legacy_sti_types!
+      return unless connection.data_source_exists?(table_name)
+
+      connection.execute(<<~SQL.squish)
+        UPDATE mcp_servers
+        SET type = REPLACE(type, 'Madcp::', 'Emcp::')
+        WHERE type LIKE 'Madcp::%'
+      SQL
     end
 
     def ensure_integrations_loaded!
@@ -114,9 +127,9 @@ class McpServer < ApplicationRecord
     end
 
     def unload_servers_namespace!
-      return unless Madcp.const_defined?(:Servers, false)
+      return unless Emcp.const_defined?(:Servers, false)
 
-      Madcp.send(:remove_const, :Servers)
+      Emcp.send(:remove_const, :Servers)
     end
 
     def clear_servers_loaded_features!
@@ -199,7 +212,7 @@ class McpServer < ApplicationRecord
   end
 
   def apply_oauth_token_paste!(access_token:, token_json: nil)
-    token = Madcp.sanitize_env_value(access_token)
+    token = Emcp.sanitize_env_value(access_token)
     raise "Access token is required" if token.empty?
 
     payload = parse_token_json_paste(token_json) || {}
@@ -211,7 +224,7 @@ class McpServer < ApplicationRecord
   end
 
   def issuer_url
-    "#{Madcp.public_url}/servers/#{code}"
+    "#{Emcp.public_url}/servers/#{code}"
   end
 
   def mcp_url

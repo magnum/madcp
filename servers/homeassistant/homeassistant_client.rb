@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Madcp
+module Emcp
   module Servers
     module HomeAssistant
       class Client < CliClient
@@ -8,7 +8,7 @@ module Madcp
           super(
             bin: ENV.fetch("HASS_CLI_BIN", "hass-cli"),
             timeout: ENV.fetch("HASS_TIMEOUT", "30").to_i,
-            max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+            max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
             env: {
               "HASS_SERVER" => ENV.fetch("HASS_SERVER", ""),
               "HASS_TOKEN" => ENV.fetch("HASS_TOKEN", ""),

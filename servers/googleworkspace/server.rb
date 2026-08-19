@@ -6,7 +6,7 @@ require "net/http"
 require "uri"
 require_relative "googleworkspace_client"
 
-module Madcp
+module Emcp
   module Servers
     module GoogleWorkspace
       class Server < ::McpServer
@@ -51,10 +51,10 @@ module Madcp
                          "Then paste the complete exported JSON into the credentials field below.",
             steps: [
               "Set up or select the Google Cloud project and enable the Workspace APIs.",
-              "Sign in with the Google account MadCP should use.",
+              "Sign in with the Google account EmCP should use.",
               "Verify the active credential source and the project associated with the OAuth client.",
               "Export unmasked credentials containing the refresh token.",
-              "Set GOOGLE_WORKSPACE_PROJECT_ID in MadCP to make quota and billing attribution explicit.",
+              "Set GOOGLE_WORKSPACE_PROJECT_ID in EmCP to make quota and billing attribution explicit.",
             ],
             commands: [
               { label: "Set up the Google Cloud project", value: "gws auth setup" },
@@ -64,7 +64,7 @@ module Madcp
                 label: "Read the project ID from the default OAuth client",
                 value: "jq -r '.installed.project_id // .web.project_id // .project_id' ~/.config/gws/client_secret.json",
               },
-              { label: "Export credentials for MadCP", value: "gws auth export --unmasked" },
+              { label: "Export credentials for EmCP", value: "gws auth export --unmasked" },
             ],
             note: "Paste only the JSON object from gws auth export --unmasked, not the " \
                   "Using keyring backend line. Leave the short-lived access token field empty: " \
@@ -220,9 +220,9 @@ module Madcp
           credentials = JSON.parse(File.read(path))
           return false unless credentials["type"].to_s == "authorized_user"
 
-          refresh = Madcp.sanitize_env_value(credentials["refresh_token"])
-          client_id = Madcp.sanitize_env_value(credentials["client_id"])
-          client_secret = Madcp.sanitize_env_value(credentials["client_secret"])
+          refresh = Emcp.sanitize_env_value(credentials["refresh_token"])
+          client_id = Emcp.sanitize_env_value(credentials["client_id"])
+          client_secret = Emcp.sanitize_env_value(credentials["client_secret"])
           return false if refresh.empty? || client_id.empty? || client_secret.empty?
 
           uri = URI("https://oauth2.googleapis.com/token")
@@ -238,13 +238,13 @@ module Madcp
           return false unless response.is_a?(Net::HTTPSuccess)
 
           body = JSON.parse(response.body)
-          access = Madcp.sanitize_env_value(body["access_token"])
+          access = Emcp.sanitize_env_value(body["access_token"])
           return false if access.empty?
 
           credentials["access_token"] = access
           credentials["token"] = access
           credentials["expiry"] = (Time.now.to_i + body.fetch("expires_in", 3600).to_i).to_s
-          new_refresh = Madcp.sanitize_env_value(body["refresh_token"])
+          new_refresh = Emcp.sanitize_env_value(body["refresh_token"])
           credentials["refresh_token"] = new_refresh unless new_refresh.empty?
 
           File.write(path, JSON.pretty_generate(credentials) + "\n", perm: 0o600)
@@ -454,14 +454,14 @@ module Madcp
           define_tool(
             name: "googleworkspace_drive_comments_list",
             description: "List Drive comments on a file (Google Docs, Sheets, etc.). " \
-                         "Requires a fields mask; MadCP supplies a useful default.",
+                         "Requires a fields mask; EmCP supplies a useful default.",
             properties: {
               file_id: string_prop("Drive file ID (same as Docs document ID for Google Docs)"),
               include_deleted: boolean_prop("Include deleted comments"),
               page_size: integer_prop("Maximum comments per page (max 100)"),
               page_token: string_prop("Pagination token"),
               start_modified_time: string_prop("RFC 3339 lower bound for modifiedTime"),
-              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+              fields: string_prop("Response field mask (required by Drive; EmCP default if omitted)"),
             },
             required: ["file_id"],
           ) do |file_id:, include_deleted: nil, page_size: nil, page_token: nil, start_modified_time: nil, fields: nil|
@@ -487,7 +487,7 @@ module Madcp
               file_id: string_prop("Drive file ID"),
               comment_id: string_prop("Comment ID"),
               include_deleted: boolean_prop("Include deleted comment content"),
-              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+              fields: string_prop("Response field mask (required by Drive; EmCP default if omitted)"),
             },
             required: %w[file_id comment_id],
           ) do |file_id:, comment_id:, include_deleted: nil, fields: nil|
@@ -521,10 +521,10 @@ module Madcp
                 "Workspace UIs may still show the comment as unanchored.",
               ),
               anchor: {
-                description: "Drive comment anchor as a JSON string, or an object that MadCP " \
+                description: "Drive comment anchor as a JSON string, or an object that EmCP " \
                              "serializes to JSON (overrides anchor_line).",
               },
-              fields: string_prop("Response field mask (required by Drive; MadCP default if omitted)"),
+              fields: string_prop("Response field mask (required by Drive; EmCP default if omitted)"),
             },
             required: %w[file_id content],
             write: true,
@@ -553,7 +553,7 @@ module Madcp
               comment_id: string_prop("Parent comment ID"),
               content: string_prop("Plain-text reply (required unless action alone is enough)"),
               action: string_prop("Optional reply action: resolve or reopen"),
-              fields: string_prop("Response field mask (MadCP default if omitted)"),
+              fields: string_prop("Response field mask (EmCP default if omitted)"),
             },
             required: %w[file_id comment_id],
             write: true,
@@ -898,4 +898,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::GoogleWorkspace::Server)
+Emcp.register_integration(Emcp::Servers::GoogleWorkspace::Server)

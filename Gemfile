@@ -101,6 +101,6 @@ gem "mission_control-jobs"
 gem "heroicon"
 gem "httparty"
 
-# MadCP MCP host
+# EmCP MCP host
 gem "mcp", "~> 0.25"
 gem "toml-rb", "~> 4.0"

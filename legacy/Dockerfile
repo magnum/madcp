@@ -40,7 +40,7 @@ RUN case "${TARGETARCH}" in \
 
 FROM ruby:4.0.6-slim-bookworm
 
-RUN useradd --create-home --uid 10001 madcp \
+RUN useradd --create-home --uid 10001 emcp \
     && apt-get update \
     && apt-get install -y --no-install-recommends gosu curl build-essential libpq-dev libpq5 \
     && rm -rf /var/lib/apt/lists/*
@@ -66,13 +66,13 @@ COPY scripts ./scripts
 COPY server.rb config.ru entrypoint.sh ./
 RUN chmod +x /app/entrypoint.sh /app/scripts/run-with-reload.sh
 
-ENV HOME=/home/madcp \
+ENV HOME=/home/emcp \
     HEY_NO_KEYRING=1 \
     BASECAMP_NO_KEYRING=1 \
-    GOOGLE_WORKSPACE_CLI_CONFIG_DIR=/home/madcp/.config/gws \
+    GOOGLE_WORKSPACE_CLI_CONFIG_DIR=/home/emcp/.config/gws \
     GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file \
-    MADCP_HOST=0.0.0.0 \
-    MADCP_PORT=8765
+    EMCP_HOST=0.0.0.0 \
+    EMCP_PORT=8765
 
 EXPOSE 8765
 

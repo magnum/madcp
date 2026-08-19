@@ -4,7 +4,7 @@ require "json"
 require "net/http"
 require "uri"
 
-module Madcp
+module Emcp
   module Servers
     module FattureInCloud
       class Client
@@ -19,7 +19,7 @@ module Madcp
         def initialize(
           token: nil,
           timeout: ENV.fetch("FATTUREINCLOUD_TIMEOUT", "30").to_i,
-          max_chars: ENV.fetch("MADCP_MAX_CHARS", "100000").to_i,
+          max_chars: ENV.fetch("EMCP_MAX_CHARS", "100000").to_i,
           on_token_refresh: nil
         )
           # nil means "read FATTUREINCLOUD_TOKEN from ENV on each request" so
@@ -92,11 +92,11 @@ module Madcp
 
         def refresh_access_token!
           @refresh_mutex.synchronize do
-            refresh = Madcp.sanitize_env_value(ENV["FATTUREINCLOUD_REFRESH_TOKEN"])
+            refresh = Emcp.sanitize_env_value(ENV["FATTUREINCLOUD_REFRESH_TOKEN"])
             return false if refresh.empty?
 
-            client_id = Madcp.sanitize_env_value(ENV["FATTUREINCLOUD_CLIENT_ID"])
-            client_secret = Madcp.sanitize_env_value(ENV["FATTUREINCLOUD_CLIENT_SECRET"])
+            client_id = Emcp.sanitize_env_value(ENV["FATTUREINCLOUD_CLIENT_ID"])
+            client_secret = Emcp.sanitize_env_value(ENV["FATTUREINCLOUD_CLIENT_SECRET"])
             return false if client_id.empty? || client_secret.empty?
 
             result = request(
@@ -115,10 +115,10 @@ module Madcp
             return false unless result[:status].between?(200, 299)
 
             body = result[:body].is_a?(Hash) ? result[:body] : {}
-            access = Madcp.sanitize_env_value(body["access_token"] || body[:access_token])
+            access = Emcp.sanitize_env_value(body["access_token"] || body[:access_token])
             return false if access.empty?
 
-            new_refresh = Madcp.sanitize_env_value(body["refresh_token"] || body[:refresh_token])
+            new_refresh = Emcp.sanitize_env_value(body["refresh_token"] || body[:refresh_token])
             new_refresh = refresh if new_refresh.empty?
             ENV["FATTUREINCLOUD_TOKEN"] = access
             ENV["FATTUREINCLOUD_REFRESH_TOKEN"] = new_refresh
@@ -133,7 +133,7 @@ module Madcp
 
         def access_token
           raw = @token_override.nil? ? ENV["FATTUREINCLOUD_TOKEN"] : @token_override
-          Madcp.sanitize_env_value(raw)
+          Emcp.sanitize_env_value(raw)
         end
 
         def response_result(response)

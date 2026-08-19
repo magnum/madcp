@@ -6,7 +6,7 @@ require "fileutils"
 require "securerandom"
 require_relative "twitter_client"
 
-module Madcp
+module Emcp
   module Servers
     module Twitter
       class Server < ::McpServer
@@ -59,22 +59,22 @@ module Madcp
           {
             title: "Authorize Twitter / X",
             description: "Use the OAuth 2.0 flow in this form (authorization code + PKCE), " \
-                         "the same MadCP token-retrieval harness as Fatture in Cloud.",
+                         "the same EmCP token-retrieval harness as Fatture in Cloud.",
             steps: [
               "In the X Developer Portal, open your app → User authentication settings.",
               "Enable OAuth 2.0, App type = Web App / Automated App or Bot (confidential client).",
-              "App permissions: Read for MadCP’s default scopes; Read and write only if you need writes " \
+              "App permissions: Read for EmCP’s default scopes; Read and write only if you need writes " \
                 "(TWITTER_ALLOW_WRITE=true) or custom write scopes.",
               "Callback URI / Redirect URL must be EXACTLY the URL shown below (copy-paste).",
-              "Also set Website URL (e.g. your MadCP public URL) — X often rejects auth without it.",
+              "Also set Website URL (e.g. your EmCP public URL) — X often rejects auth without it.",
               "Paste the OAuth 2.0 Client ID and Client Secret below (not the old API Key / Consumer Key).",
               "Choose Retrieve OAuth token — values from the fields above are used (and saved) for the flow.",
               "Optionally paste a token manually and Save credentials, or confirm the token after the OAuth callback.",
             ],
             commands: [],
-            note: "error=invalid_scope means portal App permissions do not cover the scopes MadCP requests " \
+            note: "error=invalid_scope means portal App permissions do not cover the scopes EmCP requests " \
                   "(see below). “Something went wrong” on X is usually the same mismatch, or a wrong callback URI. " \
-                  "MadCP stores tokens under data/twitter/oauth_token.json.",
+                  "EmCP stores tokens under data/twitter/oauth_token.json.",
           }
         end
 
@@ -138,12 +138,12 @@ module Madcp
         def apply_credentials(params)
           load_credentials!
           updates = oauth_app_credential_updates(params)
-          token = Madcp.sanitize_env_value(params["twitter_token"])
+          token = Emcp.sanitize_env_value(params["twitter_token"])
 
           effective_id = updates["TWITTER_CLIENT_ID"].presence ||
-            Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
+            Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
           effective_secret = updates["TWITTER_CLIENT_SECRET"].presence ||
-            Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
+            Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
 
           if token.empty?
             raise "TWITTER_CLIENT_ID is required" if effective_id.empty?
@@ -172,8 +172,8 @@ module Madcp
 
         def oauth_call(callback_url:, state:)
           load_credentials!
-          client_id = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
-          client_secret = Madcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
+          client_id = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_ID"])
+          client_secret = Emcp.sanitize_env_value(ENV["TWITTER_CLIENT_SECRET"])
           raise "TWITTER_CLIENT_ID is required — enter it above and try Retrieve again" if client_id.empty?
           raise "TWITTER_CLIENT_SECRET is required — enter it above and try Retrieve again" if client_secret.empty?
 
@@ -214,7 +214,7 @@ module Madcp
         end
 
         def oauth_scopes
-          custom = Madcp.sanitize_env_value(ENV["TWITTER_OAUTH_SCOPES"])
+          custom = Emcp.sanitize_env_value(ENV["TWITTER_OAUTH_SCOPES"])
           return custom if custom.present?
 
           scopes = DEFAULT_READ_SCOPES.dup
@@ -250,8 +250,8 @@ module Madcp
 
         def oauth_app_credential_updates(params)
           updates = {}
-          client_id = Madcp.sanitize_env_value(params["twitter_client_id"])
-          client_secret = Madcp.sanitize_env_value(params["twitter_client_secret"])
+          client_id = Emcp.sanitize_env_value(params["twitter_client_id"])
+          client_secret = Emcp.sanitize_env_value(params["twitter_client_secret"])
           updates["TWITTER_CLIENT_ID"] = client_id if client_id.present?
           updates["TWITTER_CLIENT_SECRET"] = client_secret if client_secret.present?
           updates
@@ -737,4 +737,4 @@ module Madcp
   end
 end
 
-Madcp.register_integration(Madcp::Servers::Twitter::Server)
+Emcp.register_integration(Emcp::Servers::Twitter::Server)
